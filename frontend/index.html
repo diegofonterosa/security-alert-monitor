@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini-SIEM · Security Alert Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ── CABECERA ─────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">MINI<span class="accent">SIEM</span></span>
+      </div>
+      <div class="header-meta">
+        <span class="meta-label">SECURITY ALERT MONITOR</span>
+        <span class="separator">·</span>
+        <span id="reloj" class="mono"></span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="db-status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText" class="mono">comprobando...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── STATS CARDS ───────────────────────────────────────────────────────── -->
+  <section class="stats-bar">
+    <div class="stat-card">
+      <span class="stat-label">TOTAL ALERTAS</span>
+      <span class="stat-value" id="statTotal">—</span>
+    </div>
+    <div class="stat-card critica">
+      <span class="stat-label">CRÍTICA</span>
+      <span class="stat-value" id="statCritica">—</span>
+    </div>
+    <div class="stat-card alta">
+      <span class="stat-label">ALTA</span>
+      <span class="stat-value" id="statAlta">—</span>
+    </div>
+    <div class="stat-card media">
+      <span class="stat-label">MEDIA</span>
+      <span class="stat-value" id="statMedia">—</span>
+    </div>
+    <div class="stat-card baja">
+      <span class="stat-label">BAJA</span>
+      <span class="stat-value" id="statBaja">—</span>
+    </div>
+    <div class="stat-card nueva">
+      <span class="stat-label">SIN ASIGNAR</span>
+      <span class="stat-value" id="statNueva">—</span>
+    </div>
+  </section>
+
+  <!-- ── CONTROLES / FILTROS ───────────────────────────────────────────────── -->
+  <section class="controls">
+    <div class="filters">
+      <select id="filtroSeveridad" class="filter-select">
+        <option value="">Severidad: Todas</option>
+        <option value="Crítica">Crítica</option>
+        <option value="Alta">Alta</option>
+        <option value="Media">Media</option>
+        <option value="Baja">Baja</option>
+      </select>
+
+      <select id="filtroEstado" class="filter-select">
+        <option value="">Estado: Todos</option>
+        <option value="Nueva">Nueva</option>
+        <option value="En revisión">En revisión</option>
+        <option value="Resuelta">Resuelta</option>
+        <option value="Falso positivo">Falso positivo</option>
+      </select>
+
+      <select id="filtroTipo" class="filter-select">
+        <option value="">Tipo: Todos</option>
+        <option value="Fuerza bruta">Fuerza bruta</option>
+        <option value="Malware detectado">Malware detectado</option>
+        <option value="Escaneo de puertos">Escaneo de puertos</option>
+        <option value="Acceso no autorizado">Acceso no autorizado</option>
+        <option value="Exfiltración de datos">Exfiltración de datos</option>
+        <option value="Phishing">Phishing</option>
+        <option value="Escalada de privilegios">Escalada de privilegios</option>
+        <option value="Anomalía de red">Anomalía de red</option>
+        <option value="DoS/DDoS">DoS/DDoS</option>
+        <option value="Movimiento lateral">Movimiento lateral</option>
+      </select>
+
+      <button id="btnLimpiar" class="btn-secondary">✕ Limpiar filtros</button>
+    </div>
+
+    <div class="controls-right">
+      <span id="contadorResultados" class="mono count-label"></span>
+      <button id="btnRefrescar" class="btn-primary">↺ Refrescar</button>
+    </div>
+  </section>
+
+  <!-- ── TABLA PRINCIPAL ───────────────────────────────────────────────────── -->
+  <main class="main">
+    <div class="table-wrapper">
+      <table class="alert-table">
+        <thead>
+          <tr>
+            <th>TIMESTAMP</th>
+            <th>SEVERIDAD</th>
+            <th>TIPO</th>
+            <th>ORIGEN IP</th>
+            <th>DISPOSITIVO</th>
+            <th>DESCRIPCIÓN</th>
+            <th>ESTADO</th>
+            <th>OPERADOR</th>
+            <th>ACCIONES</th>
+          </tr>
+        </thead>
+        <tbody id="tablaBody">
+          <tr class="loading-row">
+            <td colspan="9">
+              <div class="loading-msg">
+                <span class="spinner"></span>
+                Cargando alertas...
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div class="pagination" id="paginacion"></div>
+  </main>
+
+  <!-- ── MODAL DETALLE ─────────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">DETALLE DE ALERTA</span>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <label class="action-label">Cambiar estado:</label>
+          <select id="modalEstado" class="filter-select">
+            <option value="Nueva">Nueva</option>
+            <option value="En revisión">En revisión</option>
+            <option value="Resuelta">Resuelta</option>
+            <option value="Falso positivo">Falso positivo</option>
+          </select>
+          <button id="btnGuardarEstado" class="btn-primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
