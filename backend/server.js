@@ -24,7 +24,7 @@ mongoose
   });
 
 // ── Rutas (se ampliarán en Fase 2) ───────────────────────────────────────────
-// app.use('/api/alertas', require('./routes/alertas'));
+app.use('/api/alertas', require('./routes/alertas'));
 
 // ── Ruta de salud ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
