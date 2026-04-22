@@ -1,2 +1,70 @@
+# ================================
+# DEPENDENCIAS
+# ================================
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ================================
+# VARIABLES DE ENTORNO Y SECRETOS
+# ================================
 .env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# ================================
+# LOGS
+# ================================
+logs/
+*.log
+*.log.*
+
+# ================================
+# BUILD Y DIST
+# ================================
+dist/
+build/
+out/
+.cache/
+
+# ================================
+# SISTEMA OPERATIVO
+# ================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ================================
+# EDITORES E IDEs
+# ================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ================================
+# TESTING Y COBERTURA
+# ================================
+coverage/
+.nyc_output/
+test-results/
+
+# ================================
+# DEPLOY Y CLOUD
+# ================================
+.vercel
+.netlify
+.render
