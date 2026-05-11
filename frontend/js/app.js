@@ -364,6 +364,164 @@ btnRefrescar.addEventListener('click', () => {
   comprobarEstado();
 });
 
+// ── GRÁFICAS CON CHART.JS ────────────────────────────────────────────────────
+let chartsInstances = {
+  timeline: null,
+  severity: null,
+  types: null,
+};
+
+async function cargarGraficas() {
+  try {
+    // Gráfica de evolución temporal
+    const timelineData = await fetch(`${API}/charts/timeline`).then(r => r.json());
+    renderTimelineChart(timelineData.datos);
+
+    // Gráfica de distribución por severidad
+    const severityData = await fetch(`${API}/charts/severity`).then(r => r.json());
+    renderSeverityChart(severityData);
+
+    // Gráfica de top tipos
+    const typesData = await fetch(`${API}/charts/types`).then(r => r.json());
+    renderTypesChart(typesData);
+  } catch (err) {
+    console.error('Error al cargar gráficas:', err);
+  }
+}
+
+function renderTimelineChart(datos) {
+  const canvas = document.getElementById('timelineChart');
+  if (!canvas) return;
+
+  if (chartsInstances.timeline) chartsInstances.timeline.destroy();
+
+  const labels = datos.map(d => d.fecha);
+  const totales = datos.map(d => d.total);
+
+  chartsInstances.timeline = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Total Alertas',
+        data: totales,
+        borderColor: '#00d9ff',
+        backgroundColor: 'rgba(0, 217, 255, 0.1)',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: '#00d9ff',
+        pointBorderColor: '#0a0e27',
+        pointBorderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color: '#e4e6eb', font: { size: 11 } },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(42, 49, 72, 0.3)' },
+          ticks: { color: '#8892b0', font: { size: 10 } },
+        },
+        y: {
+          grid: { color: 'rgba(42, 49, 72, 0.3)' },
+          ticks: { color: '#8892b0', font: { size: 10 }, beginAtZero: true },
+        },
+      },
+    },
+  });
+}
+
+function renderSeverityChart(data) {
+  const canvas = document.getElementById('severityChart');
+  if (!canvas) return;
+
+  if (chartsInstances.severity) chartsInstances.severity.destroy();
+
+  const colores = {
+    'Crítica': '#ff3333',
+    'Alta': '#ff9933',
+    'Media': '#ffcc00',
+    'Baja': '#33cc33',
+  };
+
+  chartsInstances.severity = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: data.etiquetas,
+      datasets: [{
+        data: data.datos,
+        backgroundColor: data.etiquetas.map(e => colores[e] || '#999'),
+        borderColor: '#0a0e27',
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#e4e6eb', font: { size: 11 }, padding: 15 },
+        },
+      },
+    },
+  });
+}
+
+function renderTypesChart(data) {
+  const canvas = document.getElementById('typesChart');
+  if (!canvas) return;
+
+  if (chartsInstances.types) chartsInstances.types.destroy();
+
+  chartsInstances.types = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: data.etiquetas,
+      datasets: [{
+        label: 'Cantidad',
+        data: data.datos,
+        backgroundColor: '#00d9ff',
+        borderColor: '#00a8c2',
+        borderWidth: 1,
+        borderRadius: 3,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(42, 49, 72, 0.3)' },
+          ticks: { color: '#8892b0', font: { size: 10 } },
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#8892b0', font: { size: 10 } },
+        },
+      },
+    },
+  });
+}
+
 // ── ARRANQUE ──────────────────────────────────────────────────────────────────
 cargarStats();
 cargarAlertas();
+cargarGraficas();
+
+// Refrescar gráficas cada 5 minutos
+setInterval(cargarGraficas, 5 * 60 * 1000);

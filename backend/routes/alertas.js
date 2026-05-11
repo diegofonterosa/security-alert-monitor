@@ -270,5 +270,108 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ error: 'Error al eliminar la alerta', detalle: error.message });
   }
 });
- 
+
+// ── GET /api/alertas/charts/timeline ──────────────────────────────────────────
+// Datos para gráfica de evolución temporal (últimos 7 días)
+// Devuelve: { fecha, total, porSeveridad: { Crítica, Alta, Media, Baja } }
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/charts/timeline', async (req, res) => {
+  try {
+    const hace7dias = new Date();
+    hace7dias.setDate(hace7dias.getDate() - 7);
+
+    const data = await Alerta.aggregate([
+      {
+        $match: {
+          timestamp: { $gte: hace7dias },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            fecha: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+            severidad: '$severidad',
+          },
+          cantidad: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { '_id.fecha': 1 },
+      },
+    ]);
+
+    // Reformat para gráfica
+    const result = {};
+    data.forEach(d => {
+      if (!result[d._id.fecha]) {
+        result[d._id.fecha] = { fecha: d._id.fecha, total: 0, detalles: {} };
+      }
+      result[d._id.fecha].total += d.cantidad;
+      result[d._id.fecha].detalles[d._id.severidad] = d.cantidad;
+    });
+
+    res.json({
+      datos: Object.values(result),
+      periodo: '7 días',
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener datos de gráficas', detalle: error.message });
+  }
+});
+
+// ── GET /api/alertas/charts/severity ──────────────────────────────────────────
+// Distribuación de alertas por severidad (Pie/Doughnut chart)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/charts/severity', async (req, res) => {
+  try {
+    const data = await Alerta.aggregate([
+      {
+        $group: {
+          _id: '$severidad',
+          cantidad: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: -1 },
+      },
+    ]);
+
+    res.json({
+      etiquetas: data.map(d => d._id),
+      datos: data.map(d => d.cantidad),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener distribución de severidad', detalle: error.message });
+  }
+});
+
+// ── GET /api/alertas/charts/types ────────────────────────────────────────────
+// Top 10 tipos de alerta (Bar chart)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/charts/types', async (req, res) => {
+  try {
+    const data = await Alerta.aggregate([
+      {
+        $group: {
+          _id: '$tipo',
+          cantidad: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { cantidad: -1 },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    res.json({
+      etiquetas: data.map(d => d._id),
+      datos: data.map(d => d.cantidad),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener tipos de alerta', detalle: error.message });
+  }
+});
+
 module.exports = router;

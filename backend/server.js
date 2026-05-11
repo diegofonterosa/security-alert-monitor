@@ -15,25 +15,74 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mini-siem';
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(helmet()); // Headers de seguridad
+// Helmet con CSP mejorado
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+      scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 año
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
+
+// CORS restrictivo
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'], // Permitir solo localhost
+  origin: process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL : ['http://localhost:3000', 'http://127.0.0.1:3000'],
   methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type'],
+  credentials: false,
+  maxAge: 600,
 }));
-app.use(morgan('combined')); // Logging de solicitudes
-app.use(express.json({ limit: '10mb' })); // Limitar tamaño del body
+
+// Logging personalizado con eventos de seguridad
+const securityLog = (req, res, next) => {
+  const origSend = res.send;
+  res.send = function(data) {
+    // Registrar respuestas con status >= 400 (errores)
+    if (res.statusCode >= 400) {
+      console.warn(`[SECURITY] ${req.method} ${req.path} - Status: ${res.statusCode} - IP: ${req.ip}`);
+    }
+    // Registrar intentos de rate limiting
+    if (res.statusCode === 429) {
+      console.error(`[ATTACK] Rate limit excedido - IP: ${req.ip}`);
+    }
+    res.send = origSend;
+    return res.send(data);
+  };
+  next();
+};
+
+app.use(securityLog);
+app.use(morgan('combined')); // Logging de solicitudes HTTP
+
+// Body parser con límite
+app.use(express.json({ limit: '10mb' }));
+
+// Servir archivos estáticos
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Rate limiting: 100 requests per 15 minutes per IP
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Demasiadas solicitudes desde esta IP, por favor intenta más tarde.',
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // No aplicar rate limit a solicitudes de health check
+    return req.path === '/api/health';
+  },
 });
-app.use(limiter);
+app.use('/api/', limiter);
 
 // ── Conexión MongoDB ──────────────────────────────────────────────────────────
 mongoose

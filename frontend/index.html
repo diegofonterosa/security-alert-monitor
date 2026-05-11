@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" integrity="sha384-k0n92fqB5qTHY3Dg6g6nxQcxvCWvIYXbCOqwDrwJG+zxh6ksNWFx5c8D7BE0DtC9" crossorigin="anonymous" />
   <link rel="stylesheet" href="css/style.css" />
+  <!-- Chart.js para gráficas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" integrity="sha384-q8XJ+lPfULtXL56Q2PfBQ9B9Suj7c5zXoK5e8SPiVPPhWwIvHMvl1+AYOt6NeQjWE" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -57,6 +59,30 @@
     <div class="stat-card nueva">
       <span class="stat-label">SIN ASIGNAR</span>
       <span class="stat-value" id="statNueva">—</span>
+    </div>
+  </section>
+
+  <!-- ── GRÁFICAS ───────────────────────────────────────────────────────────── -->
+  <section class="charts-section">
+    <div class="charts-container">
+      <div class="chart-card">
+        <h3 class="chart-title">Evolución Temporal (7 días)</h3>
+        <div class="chart-wrapper">
+          <canvas id="timelineChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">Distribución por Severidad</h3>
+        <div class="chart-wrapper">
+          <canvas id="severityChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">Top 10 Tipos de Alerta</h3>
+        <div class="chart-wrapper">
+          <canvas id="typesChart"></canvas>
+        </div>
+      </div>
     </div>
   </section>
 

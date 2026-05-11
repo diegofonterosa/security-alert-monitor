@@ -1,164 +1,552 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mini-SIEM · Security Alert Monitor</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
-</head>
-<body>
+/* Mini-SIEM Personal — Estilos CSS */
 
-  <!-- ── CABECERA ─────────────────────────────────────────────────────────── -->
-  <header class="header">
-    <div class="header-left">
-      <div class="logo">
-        <span class="logo-icon">⬡</span>
-        <span class="logo-text">MINI<span class="accent">SIEM</span></span>
-      </div>
-      <div class="header-meta">
-        <span class="meta-label">SECURITY ALERT MONITOR</span>
-        <span class="separator">·</span>
-        <span id="reloj" class="mono"></span>
-      </div>
-    </div>
-    <div class="header-right">
-      <div class="db-status">
-        <span class="status-dot" id="statusDot"></span>
-        <span id="statusText" class="mono">comprobando...</span>
-      </div>
-    </div>
-  </header>
+:root {
+  --bg-dark: #0a0e27;
+  --bg-darker: #050814;
+  --bg-card: #141829;
+  --bg-input: #1a1f3a;
+  --text-primary: #e4e6eb;
+  --text-muted: #8892b0;
+  --border-color: #2a3148;
+  --critica: #ff3333;
+  --alta: #ff9933;
+  --media: #ffcc00;
+  --baja: #33cc33;
+  --accent: #00d9ff;
+}
 
-  <!-- ── STATS CARDS ───────────────────────────────────────────────────────── -->
-  <section class="stats-bar">
-    <div class="stat-card">
-      <span class="stat-label">TOTAL ALERTAS</span>
-      <span class="stat-value" id="statTotal">—</span>
-    </div>
-    <div class="stat-card critica">
-      <span class="stat-label">CRÍTICA</span>
-      <span class="stat-value" id="statCritica">—</span>
-    </div>
-    <div class="stat-card alta">
-      <span class="stat-label">ALTA</span>
-      <span class="stat-value" id="statAlta">—</span>
-    </div>
-    <div class="stat-card media">
-      <span class="stat-label">MEDIA</span>
-      <span class="stat-value" id="statMedia">—</span>
-    </div>
-    <div class="stat-card baja">
-      <span class="stat-label">BAJA</span>
-      <span class="stat-value" id="statBaja">—</span>
-    </div>
-    <div class="stat-card nueva">
-      <span class="stat-label">SIN ASIGNAR</span>
-      <span class="stat-value" id="statNueva">—</span>
-    </div>
-  </section>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-  <!-- ── CONTROLES / FILTROS ───────────────────────────────────────────────── -->
-  <section class="controls">
-    <div class="filters">
-      <select id="filtroSeveridad" class="filter-select">
-        <option value="">Severidad: Todas</option>
-        <option value="Crítica">Crítica</option>
-        <option value="Alta">Alta</option>
-        <option value="Media">Media</option>
-        <option value="Baja">Baja</option>
-      </select>
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+}
 
-      <select id="filtroEstado" class="filter-select">
-        <option value="">Estado: Todos</option>
-        <option value="Nueva">Nueva</option>
-        <option value="En revisión">En revisión</option>
-        <option value="Resuelta">Resuelta</option>
-        <option value="Falso positivo">Falso positivo</option>
-      </select>
+/* CABECERA */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 2rem;
+  background: linear-gradient(135deg, var(--bg-darker), var(--bg-dark));
+  border-bottom: 1px solid var(--border-color);
+}
 
-      <select id="filtroTipo" class="filter-select">
-        <option value="">Tipo: Todos</option>
-        <option value="Fuerza bruta">Fuerza bruta</option>
-        <option value="Malware detectado">Malware detectado</option>
-        <option value="Escaneo de puertos">Escaneo de puertos</option>
-        <option value="Acceso no autorizado">Acceso no autorizado</option>
-        <option value="Exfiltración de datos">Exfiltración de datos</option>
-        <option value="Phishing">Phishing</option>
-        <option value="Escalada de privilegios">Escalada de privilegios</option>
-        <option value="Anomalía de red">Anomalía de red</option>
-        <option value="DoS/DDoS">DoS/DDoS</option>
-        <option value="Movimiento lateral">Movimiento lateral</option>
-      </select>
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
 
-      <button id="btnLimpiar" class="btn-secondary">✕ Limpiar filtros</button>
-    </div>
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
 
-    <div class="controls-right">
-      <span id="contadorResultados" class="mono count-label"></span>
-      <button id="btnRefrescar" class="btn-primary">↺ Refrescar</button>
-    </div>
-  </section>
+.logo-icon {
+  color: var(--accent);
+  font-size: 1.6rem;
+}
 
-  <!-- ── TABLA PRINCIPAL ───────────────────────────────────────────────────── -->
-  <main class="main">
-    <div class="table-wrapper">
-      <table class="alert-table">
-        <thead>
-          <tr>
-            <th>TIMESTAMP</th>
-            <th>SEVERIDAD</th>
-            <th>TIPO</th>
-            <th>ORIGEN IP</th>
-            <th>DISPOSITIVO</th>
-            <th>DESCRIPCIÓN</th>
-            <th>ESTADO</th>
-            <th>OPERADOR</th>
-            <th>ACCIONES</th>
-          </tr>
-        </thead>
-        <tbody id="tablaBody">
-          <tr class="loading-row">
-            <td colspan="9">
-              <div class="loading-msg">
-                <span class="spinner"></span>
-                Cargando alertas...
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+.logo-text {
+  letter-spacing: 0.1em;
+}
 
-    <!-- Paginación -->
-    <div class="pagination" id="paginacion"></div>
-  </main>
+.accent {
+  color: var(--accent);
+}
 
-  <!-- ── MODAL DETALLE ─────────────────────────────────────────────────────── -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal">
-      <div class="modal-header">
-        <span class="modal-title">DETALLE DE ALERTA</span>
-        <button class="modal-close" id="modalClose">✕</button>
-      </div>
-      <div class="modal-body" id="modalBody"></div>
-      <div class="modal-footer">
-        <div class="modal-actions">
-          <label class="action-label">Cambiar estado:</label>
-          <select id="modalEstado" class="filter-select">
-            <option value="Nueva">Nueva</option>
-            <option value="En revisión">En revisión</option>
-            <option value="Resuelta">Resuelta</option>
-            <option value="Falso positivo">Falso positivo</option>
-          </select>
-          <button id="btnGuardarEstado" class="btn-primary">Guardar</button>
-        </div>
-      </div>
-    </div>
-  </div>
+.header-meta {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
 
-  <script src="js/app.js"></script>
-</body>
-</html>
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.db-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #999;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.ok {
+  background: var(--baja);
+}
+
+.status-dot.error {
+  background: var(--critica);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* STATS CARDS */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.stat-card.critica { border-left: 3px solid var(--critica); }
+.stat-card.alta { border-left: 3px solid var(--alta); }
+.stat-card.media { border-left: 3px solid var(--media); }
+.stat-card.baja { border-left: 3px solid var(--baja); }
+.stat-card.nueva { border-left: 3px solid var(--accent); }
+
+/* GRÁFICAS */
+.charts-section {
+  padding: 1.5rem 2rem;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.charts-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chart-title {
+  font-size: 0.9rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 250px;
+}
+
+/* CONTROLES */
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-select {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-select:hover {
+  border-color: var(--accent);
+}
+
+.controls-right {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.count-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* BOTONES */
+.btn-primary, .btn-secondary, .btn-row {
+  border: none;
+  border-radius: 3px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg-dark);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: #00b8d4;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-row {
+  background: var(--accent);
+  color: var(--bg-dark);
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.75rem;
+}
+
+.btn-row:hover {
+  background: #00b8d4;
+}
+
+/* TABLA */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  margin: 2rem;
+  border-radius: 4px;
+  background: var(--bg-card);
+}
+
+.alert-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.alert-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--bg-darker);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.alert-table th {
+  padding: 0.8rem;
+  text-align: left;
+  color: var(--accent);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.alert-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.2s;
+}
+
+.alert-table tbody tr:hover {
+  background: rgba(0, 217, 255, 0.05);
+}
+
+.alert-table td {
+  padding: 0.8rem;
+  color: var(--text-primary);
+}
+
+.col-ts, .col-ip, .col-operador {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.col-desc {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* BADGES */
+.badge {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-critica { background: var(--critica); color: white; }
+.badge-alta { background: var(--alta); color: white; }
+.badge-media { background: var(--media); color: var(--bg-dark); }
+.badge-baja { background: var(--baja); color: var(--bg-dark); }
+
+.estado-badge {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.estado-Nueva { background: rgba(0, 217, 255, 0.2); color: var(--accent); }
+.estado-revision { background: rgba(255, 153, 51, 0.2); color: var(--alta); }
+.estado-Resuelta { background: rgba(51, 204, 51, 0.2); color: var(--baja); }
+.estado-falso { background: rgba(136, 136, 136, 0.2); color: var(--text-muted); }
+
+/* PAGINACIÓN */
+.pagination {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.page-btn {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.page-btn.active {
+  background: var(--accent);
+  color: var(--bg-dark);
+  font-weight: 600;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+  color: var(--accent);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--critica);
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.modal-field.full {
+  grid-column: 1 / -1;
+}
+
+.modal-field-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.modal-field-value {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.modal-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.action-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* LOADING */
+.loading-row, .empty-row {
+  text-align: center;
+  padding: 2rem !important;
+  color: var(--text-muted);
+}
+
+.loading-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .charts-container {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .alert-table {
+    font-size: 0.75rem;
+  }
+
+  .modal-body {
+    grid-template-columns: 1fr;
+  }
+}

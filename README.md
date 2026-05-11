@@ -95,6 +95,9 @@ security-alert-monitor/
 | `GET` | `/api/health` | Estado de salud del servicio |
 | `GET` | `/api/alertas` | Listar todas las alertas (con filtros y paginación) |
 | `GET` | `/api/alertas/stats` | Estadísticas agregadas por severidad y estado |
+| `GET` | `/api/alertas/charts/timeline` | Evolución temporal (últimos 7 días) |
+| `GET` | `/api/alertas/charts/severity` | Distribución por severidad |
+| `GET` | `/api/alertas/charts/types` | Top 10 tipos de alerta |
 | `GET` | `/api/alertas/:id` | Obtener alerta por ID |
 | `POST` | `/api/alertas` | Crear nueva alerta |
 | `PATCH` | `/api/alertas/:id/estado` | Actualizar estado de alerta |
@@ -123,7 +126,7 @@ security-alert-monitor/
 - [x] **Fase 2** — API REST: CRUD completo
 - [x] **Fase 3** — Dashboard HTML con tabla en vivo
 - [x] **Fase 4** — Filtros por severidad, estado y búsqueda
-- [ ] **Fase 5** — Gráficas con Chart.js + aggregation pipeline
+- [x] **Fase 5** — Gráficas con Chart.js + aggregation pipeline
 - [ ] **Fase 6** — Autenticación JWT + roles
 - [ ] **Fase 7** — Deploy en Atlas + Render
 - [x] **Fase 8** — Mejoras de seguridad (rate limiting, validación, sanitización)
