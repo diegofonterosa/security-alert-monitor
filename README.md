@@ -3,7 +3,7 @@
 > Panel de monitorización de alertas de seguridad inspirado en entornos CRA reales.  
 > Stack: Node.js · Express · MongoDB · HTML/CSS/JS Vanilla
 
-![Status](https://img.shields.io/badge/status-en%20desarrollo-yellow)
+![Status](https://img.shields.io/badge/status-funcional-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
 ![MongoDB](https://img.shields.io/badge/database-MongoDB-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -14,7 +14,7 @@
 
 **Security Alert Monitor** es un mini-SIEM (Security Information and Event Management) personal que permite recibir, almacenar, filtrar y visualizar eventos de seguridad en tiempo real a través de una API REST y un dashboard web.
 
-Desarrollado como proyecto de portfolio integrando bases de datos NoSQL (MongoDB) con un backend Express y un frontend estático — sin frameworks, HTML/CSS/JS puro.
+Desarrollado como proyecto de portfolio integrando bases de datos NoSQL (MongoDB) con un backend Express y un frontend estático — sin frameworks, HTML/CSS/JS puro. Incluye medidas de seguridad avanzadas como rate limiting, validación de entrada y prevención de XSS.
 
 ---
 
@@ -35,8 +35,8 @@ Desarrollado como proyecto de portfolio integrando bases de datos NoSQL (MongoDB
 | Backend | Node.js + Express |
 | Base de datos | MongoDB + Mongoose |
 | Frontend | HTML5 + CSS3 + JavaScript (ES6+) |
-| Gráficas | Chart.js |
-| Autenticación | JWT |
+| Seguridad | Helmet, CORS, Rate Limiting, Express Validator |
+| Logging | Morgan |
 | Config | dotenv |
 | Dev | nodemon |
 | Deploy | MongoDB Atlas + Render |
@@ -76,12 +76,12 @@ security-alert-monitor/
 {
   "_id": "ObjectId",
   "timestamp": "2026-03-11T14:32:00Z",
-  "tipo": "intrusión | acceso | fallo_red | alarma_fisica",
-  "severidad": "baja | media | alta | crítica",
+  "tipo": "Acceso no autorizado | Fuerza bruta | Malware detectado | Exfiltración de datos | Escaneo de puertos | Escalada de privilegios | DoS/DDoS | Phishing | Movimiento lateral | Anomalía de red",
+  "severidad": "Baja | Media | Alta | Crítica",
   "origen_ip": "192.168.1.45",
-  "dispositivo": "Cámara-Sector-A",
-  "descripcion": "Movimiento detectado fuera de horario",
-  "estado": "pendiente | revisada | resuelta",
+  "dispositivo": "workstation-contabilidad",
+  "descripcion": "Descripción detallada de la alerta",
+  "estado": "Nueva | En revisión | Resuelta | Falso positivo",
   "operador": "Diego"
 }
 ```
@@ -92,25 +92,38 @@ security-alert-monitor/
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `GET` | `/api/alertas` | Listar todas las alertas |
+| `GET` | `/api/health` | Estado de salud del servicio |
+| `GET` | `/api/alertas` | Listar todas las alertas (con filtros y paginación) |
+| `GET` | `/api/alertas/stats` | Estadísticas agregadas por severidad y estado |
 | `GET` | `/api/alertas/:id` | Obtener alerta por ID |
-| `GET` | `/api/alertas?severidad=alta` | Filtrar por severidad/estado |
 | `POST` | `/api/alertas` | Crear nueva alerta |
-| `PATCH` | `/api/alertas/:id/estado` | Actualizar estado |
+| `PATCH` | `/api/alertas/:id/estado` | Actualizar estado de alerta |
+| `PATCH` | `/api/alertas/:id/operador` | Asignar operador a alerta |
 | `DELETE` | `/api/alertas/:id` | Eliminar alerta |
 
 ---
 
-## 🗺️ Roadmap
+## � Características de Seguridad
+
+- **Rate Limiting**: Límite de 100 solicitudes por IP cada 15 minutos
+- **Validación de Entrada**: Sanitización y validación con express-validator
+- **Prevención XSS**: Escape de HTML en contenido dinámico
+- **Headers de Seguridad**: Configurados con Helmet (HSTS, CSP, etc.)
+- **Control CORS**: Solo permite orígenes locales
+- **Logging**: Registro de solicitudes HTTP con Morgan
+- **Límite de Tamaño**: Body limitado a 10MB para prevenir DoS
+
+---
 
 - [x] Definición del proyecto y stack
-- [ ] **Fase 1** — Modelo Mongoose + seed (20 alertas)
-- [ ] **Fase 2** — API REST: CRUD completo
-- [ ] **Fase 3** — Dashboard HTML con tabla en vivo
-- [ ] **Fase 4** — Filtros por severidad, estado y búsqueda
+- [x] **Fase 1** — Modelo Mongoose + seed (20 alertas)
+- [x] **Fase 2** — API REST: CRUD completo
+- [x] **Fase 3** — Dashboard HTML con tabla en vivo
+- [x] **Fase 4** — Filtros por severidad, estado y búsqueda
 - [ ] **Fase 5** — Gráficas con Chart.js + aggregation pipeline
 - [ ] **Fase 6** — Autenticación JWT + roles
 - [ ] **Fase 7** — Deploy en Atlas + Render
+- [x] **Fase 8** — Mejoras de seguridad (rate limiting, validación, sanitización)
 
 ---
 
@@ -143,8 +156,7 @@ Crea un archivo `.env` en la raíz basándote en `.env.example`:
 
 ```env
 PORT=3000
-MONGODB_URI=mongodb+srv://<usuario>:<password>@cluster.mongodb.net/siem
-JWT_SECRET=tu_clave_secreta
+MONGO_URI=mongodb+srv://<usuario>:<password>@cluster.mongodb.net/mini-siem
 ```
 
 ---
