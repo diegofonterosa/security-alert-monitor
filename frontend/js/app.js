@@ -121,6 +121,12 @@ function truncar(texto, max = 90) {
   return escaped.length > max ? escaped.slice(0, max) + '…' : escaped;
 }
 
+// ── Escapar HTML ───────────────────────────────────────────────────────────────
+function escaparHTML(texto) {
+  if (!texto) return '—';
+  return String(texto).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#x27;');
+}
+
 // ── Cargar y renderizar alertas ───────────────────────────────────────────────
 async function cargarAlertas() {
   // Mostrar loading
@@ -153,7 +159,7 @@ async function cargarAlertas() {
   } catch (err) {
     tablaBody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="9">⚠ Error al conectar con la API: ${err.message}</td>
+        <td colspan="9">⚠ Error al conectar con la API: ${escaparHTML(err.message)}</td>
       </tr>`;
     console.error(err);
   }
@@ -173,12 +179,12 @@ function renderizarTabla(alertas) {
     <tr data-id="${a._id}">
       <td class="col-ts">${formatTs(a.timestamp)}</td>
       <td>${badgeSeveridad(a.severidad)}</td>
-      <td>${a.tipo || '—'}</td>
-      <td class="col-ip mono">${a.origen_ip || '—'}</td>
-      <td class="col-dispositivo">${a.dispositivo || '—'}</td>
+      <td>${escaparHTML(a.tipo)}</td>
+      <td class="col-ip mono">${escaparHTML(a.origen_ip)}</td>
+      <td class="col-dispositivo">${escaparHTML(a.dispositivo)}</td>
       <td class="col-desc">${truncar(a.descripcion)}</td>
       <td>${badgeEstado(a.estado)}</td>
-      <td class="col-operador">${a.operador || '—'}</td>
+      <td class="col-operador">${escaparHTML(a.operador)}</td>
       <td>
         <button class="btn-row" data-id="${a._id}">Ver</button>
       </td>
@@ -249,7 +255,7 @@ async function abrirModal(id) {
       </div>
       <div class="modal-field">
         <span class="modal-field-label">TIPO</span>
-        <span class="modal-field-value">${a.tipo}</span>
+        <span class="modal-field-value">${escaparHTML(a.tipo)}</span>
       </div>
       <div class="modal-field">
         <span class="modal-field-label">ESTADO</span>
@@ -257,15 +263,15 @@ async function abrirModal(id) {
       </div>
       <div class="modal-field">
         <span class="modal-field-label">ORIGEN IP</span>
-        <span class="modal-field-value mono">${a.origen_ip}</span>
+        <span class="modal-field-value mono">${escaparHTML(a.origen_ip)}</span>
       </div>
       <div class="modal-field">
         <span class="modal-field-label">DISPOSITIVO</span>
-        <span class="modal-field-value mono">${a.dispositivo}</span>
+        <span class="modal-field-value mono">${escaparHTML(a.dispositivo)}</span>
       </div>
       <div class="modal-field">
         <span class="modal-field-label">OPERADOR</span>
-        <span class="modal-field-value mono">${a.operador || '—'}</span>
+        <span class="modal-field-value mono">${escaparHTML(a.operador)}</span>
       </div>
       <div class="modal-field">
         <span class="modal-field-label">ID INTERNO</span>
@@ -273,7 +279,7 @@ async function abrirModal(id) {
       </div>
       <div class="modal-field full">
         <span class="modal-field-label">DESCRIPCIÓN</span>
-        <span class="modal-field-value">${a.descripcion.replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</span>
+        <span class="modal-field-value">${escaparHTML(a.descripcion)}</span>
       </div>
     `;
 
@@ -281,7 +287,7 @@ async function abrirModal(id) {
     modalEstado.value = a.estado;
 
   } catch (err) {
-    modalBody.innerHTML = `<p style="color:var(--critica)">Error al cargar alerta: ${err.message}</p>`;
+    modalBody.innerHTML = `<p style="color:var(--critica)">Error al cargar alerta: ${escaparHTML(err.message)}</p>`;
   }
 }
 

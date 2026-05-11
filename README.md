@@ -107,11 +107,14 @@ security-alert-monitor/
 
 - **Rate Limiting**: Límite de 100 solicitudes por IP cada 15 minutos
 - **Validación de Entrada**: Sanitización y validación con express-validator
-- **Prevención XSS**: Escape de HTML en contenido dinámico
+- **Prevención XSS**: Escape de HTML en contenido dinámico (backend + frontend)
+- **Prevención de Mass Assignment**: Whitelist explícita de campos permitidos en POST
 - **Headers de Seguridad**: Configurados con Helmet (HSTS, CSP, etc.)
+- **Subresource Integrity**: SRI en recursos externos (Google Fonts)
 - **Control CORS**: Solo permite orígenes locales
 - **Logging**: Registro de solicitudes HTTP con Morgan
 - **Límite de Tamaño**: Body limitado a 10MB para prevenir DoS
+- **Accesibilidad**: Labels y elementos form correctamente asociados
 
 ---
 

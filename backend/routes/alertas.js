@@ -36,6 +36,15 @@ router.get('/', async (req, res) => {
     const limitNum = Math.min(Number.parseInt(limite), 100); // máximo 100 por página
     const skip     = (Number.parseInt(pagina) - 1) * limitNum;
  
+    // Ejecutar consulta y contar total en paralelo
+    const [alertas, total] = await Promise.all([
+      Alerta.find(filtro)
+        .sort({ timestamp: -1 })   // más recientes primero
+        .skip(skip)
+        .limit(limitNum),
+      Alerta.countDocuments(filtro),
+    ]);
+ 
     res.json({
       total,
       pagina: Number.parseInt(pagina),
@@ -135,7 +144,18 @@ router.post('/', [
   }
 
   try {
-    const nuevaAlerta = new Alerta(req.body);
+    // Whitelist de campos permitidos para evitar mass assignment
+    const campos = {
+      tipo: req.body.tipo,
+      severidad: req.body.severidad,
+      origen_ip: req.body.origen_ip,
+      dispositivo: req.body.dispositivo,
+      descripcion: req.body.descripcion,
+      estado: req.body.estado || 'Nueva',
+      operador: req.body.operador || null,
+    };
+
+    const nuevaAlerta = new Alerta(campos);
     const guardada = await nuevaAlerta.save();
 
     res.status(201).json(guardada);
