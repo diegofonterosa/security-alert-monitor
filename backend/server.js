@@ -1,116 +1,124 @@
 // server.js — Mini-SIEM Personal
-// Fase 1: servidor base + conexión MongoDB
+// Fases 1-8 completas
 
 require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const path = require('node:path');
+const express   = require('express');
+const mongoose  = require('mongoose');
+const path      = require('node:path');
 const rateLimit = require('express-rate-limit');
-const cors = require('cors');
-const morgan = require('morgan');
-const helmet = require('helmet');
+const cors      = require('cors');
+const morgan    = require('morgan');
+const helmet    = require('helmet');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const app       = express();
+const PORT      = process.env.PORT      || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mini-siem';
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-// Helmet con CSP mejorado
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", 'https://fonts.googleapis.com'],
-      scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'"],
+    contentSecurityPolicy: {
+          directives: {
+                  defaultSrc: ["'self'"],
+                  styleSrc:   ["'self'", 'https://fonts.googleapis.com'],
+                  scriptSrc:  ["'self'", 'https://cdn.jsdelivr.net'],
+                  fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
+                  imgSrc:     ["'self'", 'data:'],
+                  connectSrc: ["'self'"],
+          },
     },
-  },
-  hsts: {
-    maxAge: 31536000, // 1 año
-    includeSubDomains: true,
-    preload: true,
-  },
+    hsts: {
+          maxAge: 31536000,
+          includeSubDomains: true,
+          preload: true,
+    },
 }));
 
-// CORS restrictivo
+// CORS — en produccion solo acepta FRONTEND_URL, en dev acepta localhost
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL : ['http://localhost:3000', 'http://127.0.0.1:3000'],
-  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type'],
-  credentials: false,
-  maxAge: 600,
+    origin: process.env.NODE_ENV === 'production'
+      ? process.env.FRONTEND_URL
+          : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
+    maxAge: 600,
 }));
 
-// Logging personalizado con eventos de seguridad
+// Logging de eventos de seguridad
 const securityLog = (req, res, next) => {
-  const origSend = res.send;
-  res.send = function(data) {
-    // Registrar respuestas con status >= 400 (errores)
-    if (res.statusCode >= 400) {
-      console.warn(`[SECURITY] ${req.method} ${req.path} - Status: ${res.statusCode} - IP: ${req.ip}`);
-    }
-    // Registrar intentos de rate limiting
-    if (res.statusCode === 429) {
-      console.error(`[ATTACK] Rate limit excedido - IP: ${req.ip}`);
-    }
-    res.send = origSend;
-    return res.send(data);
-  };
-  next();
+    const origSend = res.send;
+    res.send = function(data) {
+          if (res.statusCode >= 400) {
+                  console.warn(`[SECURITY] ${req.method} ${req.path} - Status: ${res.statusCode} - IP: ${req.ip}`);
+          }
+          if (res.statusCode === 429) {
+                  console.error(`[ATTACK] Rate limit excedido - IP: ${req.ip}`);
+          }
+          res.send = origSend;
+          return res.send(data);
+    };
+    next();
 };
 
 app.use(securityLog);
-app.use(morgan('combined')); // Logging de solicitudes HTTP
-
-// Body parser con límite
+app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
-
-// Servir archivos estáticos
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Rate limiting: 100 requests per 15 minutes per IP
+// Rate limiting general: 100 req / 15 min por IP
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Demasiadas solicitudes desde esta IP, por favor intenta más tarde.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // No aplicar rate limit a solicitudes de health check
-    return req.path === '/api/health';
-  },
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Demasiadas solicitudes desde esta IP, intenta mas tarde.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.path === '/api/health',
 });
 app.use('/api/', limiter);
 
-// ── Conexión MongoDB ──────────────────────────────────────────────────────────
+// Rate limiting estricto para login: 10 intentos / 15 min (anti fuerza bruta)
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: 'Demasiados intentos de login. Espera 15 minutos.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/auth/login', loginLimiter);
+
+// ── Conexion MongoDB ──────────────────────────────────────────────────────────
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log(`MongoDB conectado: ${MONGO_URI}`))
   .catch(err => {
-    console.error('Error de conexión MongoDB:', err.message);
-    process.exit(1);
+        console.error('Error de conexion MongoDB:', err.message);
+        process.exit(1);
   });
 
-// ── Rutas (se ampliarán en Fase 2) ───────────────────────────────────────────
+// ── Rutas ─────────────────────────────────────────────────────────────────────
 app.use('/api/alertas', require('./routes/alertas'));
+app.use('/api/auth',    require('./routes/auth'));      // Fase 6: autenticacion JWT
 
 // ── Ruta de salud ─────────────────────────────────────────────────────────────
+// FIX Fase 5: ahora devuelve db: 'conectado' para que el indicador del dashboard funcione
 app.get('/api/health', (req, res) => {
-  // No exponer detalles de la DB para evitar fingerprinting
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-  });
+    const estadoDB = mongoose.connection.readyState === 1
+      ? 'conectado'
+          : 'desconectado';
+
+          res.json({
+                status:    'OK',
+                db:        estadoDB,
+                timestamp: new Date().toISOString(),
+          });
 });
 
 // ── Fallback — servir index.html para rutas no API ────────────────────────────
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 // ── Arrancar servidor ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`Servidor Mini-SIEM corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor Mini-SIEM corriendo en http://localhost:${PORT}`);
 });
