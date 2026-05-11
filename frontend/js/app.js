@@ -117,7 +117,8 @@ function badgeEstado(estado) {
 // ── Truncar texto largo ───────────────────────────────────────────────────────
 function truncar(texto, max = 90) {
   if (!texto) return '—';
-  return texto.length > max ? texto.slice(0, max) + '…' : texto;
+  const escaped = texto.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return escaped.length > max ? escaped.slice(0, max) + '…' : escaped;
 }
 
 // ── Cargar y renderizar alertas ───────────────────────────────────────────────
@@ -265,12 +266,12 @@ async function abrirModal(id) {
         <span class="modal-field-value mono">${a.operador || '—'}</span>
       </div>
       <div class="modal-field">
-        <span class="modal-field-label">ID MONGODB</span>
-        <span class="modal-field-value mono" style="font-size:0.68rem;color:var(--text-muted)">${a._id}</span>
+        <span class="modal-field-label">ID INTERNO</span>
+        <span class="modal-field-value mono" style="font-size:0.68rem;color:var(--text-muted)">[OCULTO]</span>
       </div>
       <div class="modal-field full">
         <span class="modal-field-label">DESCRIPCIÓN</span>
-        <span class="modal-field-value">${a.descripcion}</span>
+        <span class="modal-field-value">${a.descripcion.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
       </div>
     `;
 

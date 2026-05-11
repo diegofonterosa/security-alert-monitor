@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const { body, validationResult } = require('express-validator');
 const Alerta = require('../models/Alerta');
  
 // ── Helper: validar ObjectId ──────────────────────────────────────────────────
@@ -117,13 +118,37 @@ router.get('/:id', async (req, res) => {
 // Crea una nueva alerta
 // Body JSON con los campos del esquema (timestamp es opcional, default = ahora)
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/', async (req, res) => {
+router.post('/', [
+  body('tipo').isIn([
+    'Acceso no autorizado',
+    'Fuerza bruta',
+    'Malware detectado',
+    'Exfiltración de datos',
+    'Escaneo de puertos',
+    'Escalada de privilegios',
+    'DoS/DDoS',
+    'Phishing',
+    'Movimiento lateral',
+    'Anomalía de red',
+  ]).withMessage('Tipo de alerta no válido'),
+  body('severidad').isIn(['Baja', 'Media', 'Alta', 'Crítica']).withMessage('Severidad no válida'),
+  body('origen_ip').isIP().withMessage('IP de origen no válida'),
+  body('dispositivo').isLength({ min: 1, max: 100 }).trim().escape().withMessage('Dispositivo requerido y debe ser menor a 100 caracteres'),
+  body('descripcion').isLength({ min: 1, max: 500 }).trim().escape().withMessage('Descripción requerida y debe ser menor a 500 caracteres'),
+  body('estado').optional().isIn(['Nueva', 'En revisión', 'Resuelta', 'Falso positivo']).withMessage('Estado no válido'),
+  body('operador').optional().isLength({ max: 50 }).trim().escape().withMessage('Operador debe ser menor a 50 caracteres'),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Datos no válidos', detalle: errors.array() });
+  }
+
   try {
     const nuevaAlerta = new Alerta(req.body);
     const guardada = await nuevaAlerta.save();
- 
+
     res.status(201).json(guardada);
- 
+
   } catch (error) {
     // Error de validación de Mongoose (campos requeridos, enums, regex IP...)
     if (error.name === 'ValidationError') {
@@ -138,17 +163,20 @@ router.post('/', async (req, res) => {
 // Actualiza solo el estado de una alerta
 // Body: { "estado": "Resuelta" }
 // ─────────────────────────────────────────────────────────────────────────────
-router.patch('/:id/estado', async (req, res) => {
+router.patch('/:id/estado', [
+  body('estado').isIn(['Nueva', 'En revisión', 'Resuelta', 'Falso positivo']).withMessage('Estado no válido'),
+], async (req, res) => {
   if (!esIdValido(req.params.id)) {
     return res.status(400).json({ error: 'ID no válido' });
   }
- 
-  const { estado } = req.body;
- 
-  if (!estado) {
-    return res.status(400).json({ error: 'El campo "estado" es obligatorio' });
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Datos no válidos', detalle: errors.array() });
   }
- 
+
+  const { estado } = req.body;
+
   try {
     const actualizada = await Alerta.findByIdAndUpdate(
       req.params.id,
@@ -178,17 +206,20 @@ router.patch('/:id/estado', async (req, res) => {
 // Asigna un operador a la alerta
 // Body: { "operador": "diego" }
 // ─────────────────────────────────────────────────────────────────────────────
-router.patch('/:id/operador', async (req, res) => {
+router.patch('/:id/operador', [
+  body('operador').isLength({ min: 1, max: 50 }).trim().escape().withMessage('Operador requerido y debe ser menor a 50 caracteres'),
+], async (req, res) => {
   if (!esIdValido(req.params.id)) {
     return res.status(400).json({ error: 'ID no válido' });
   }
- 
-  const { operador } = req.body;
- 
-  if (!operador) {
-    return res.status(400).json({ error: 'El campo "operador" es obligatorio' });
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Datos no válidos', detalle: errors.array() });
   }
- 
+
+  const { operador } = req.body;
+
   try {
     const actualizada = await Alerta.findByIdAndUpdate(
       req.params.id,
