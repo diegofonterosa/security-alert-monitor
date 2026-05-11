@@ -34,6 +34,35 @@
     </div>
   </header>
 
+
+  <!-- BARRA AUTH -->
+  <div id="authBar" class="auth-bar" style="display:none;">
+      <span id="authUser" class="auth-user mono"></span>span>
+      <button id="btnLogout" class="btn-logout">Cerrar sesion</button>button>
+  </div>div>
+
+  <!-- MODAL LOGIN -->
+  <div class="modal-overlay" id="loginOverlay" style="display:flex;">
+      <div class="modal modal-login">
+            <div class="modal-header">
+                    <span class="modal-title">ACCESO MINI<span class="accent">SIEM</span>span></span>span>
+            </div>div>
+            <div class="modal-body">
+                    <form id="loginForm" autocomplete="off">
+                              <div class="login-field">
+                                          <label for="loginUser" class="action-label">Usuario</label>label>
+                                          <input type="text" id="loginUser" class="filter-select" autocomplete="username" placeholder="admin" required />
+                              </div>div>
+                              <div class="login-field">
+                                          <label for="loginPass" class="action-label">Contrasena</label>label>
+                                          <input type="password" id="loginPass" class="filter-select" autocomplete="current-password" placeholder="......" required />
+                              </div>div>
+                              <p id="loginError" class="login-error" style="display:none;"></p>p>
+                              <button type="submit" id="btnLogin" class="btn-primary">Iniciar sesion</button>button>
+                    </form>form>
+            </div>div>
+      </div>div>
+  </div>div>
   <!-- ── STATS CARDS ───────────────────────────────────────────────────────── -->
   <section class="stats-bar">
     <div class="stat-card">
@@ -184,7 +213,8 @@
       </div>
     </div>
   </div>
-
+  <script src="js/auth.js"></script>
+    
   <script src="js/app.js"></script>
 </body>
 </html>
