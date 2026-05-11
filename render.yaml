@@ -1,0 +1,47 @@
+# render.yaml - Configuracion de deploy automatico en Render
+# Docs: https://render.com/docs/yaml-spec
+#
+# Instrucciones:
+# 1. Conecta tu repo en https://dashboard.render.com
+# 2. Render detectara este archivo automaticamente
+# 3. Configura las variables MONGO_URI, ADMIN_USER, ADMIN_HASH
+#    en el dashboard de Render (Environment > Environment Variables)
+
+services:
+  - type: web
+    name: mini-siem
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: PORT
+        value: 3000
+
+      # Configurar en Render dashboard (no guardar aqui)
+      - key: MONGO_URI
+        sync: false
+
+      # Render genera automaticamente un valor aleatorio seguro
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: JWT_EXPIRES_IN
+        value: 8h
+
+      # Configurar en Render dashboard
+      - key: ADMIN_USER
+        sync: false
+
+      # Hash bcrypt de la contrasena (generado con: npm run generar-hash)
+      # Configurar en Render dashboard
+      - key: ADMIN_HASH
+        sync: false
+
+      # URL del frontend (Render la asigna al desplegar)
+      - key: FRONTEND_URL
