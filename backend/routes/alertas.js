@@ -6,6 +6,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
 const Alerta = require('../models/Alerta');
+const { requireAuth } = require('../middleware/auth');
  
 // ── Helper: validar ObjectId ──────────────────────────────────────────────────
 function esIdValido(id) {
@@ -118,7 +119,7 @@ router.get('/:id', async (req, res) => {
 // Crea una nueva alerta
 // Body JSON con los campos del esquema (timestamp es opcional, default = ahora)
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/', [
+router.post('/', requireAuth, [
   body('tipo').isIn([
     'Acceso no autorizado',
     'Fuerza bruta',
@@ -174,7 +175,7 @@ router.post('/', [
 // Actualiza solo el estado de una alerta
 // Body: { "estado": "Resuelta" }
 // ─────────────────────────────────────────────────────────────────────────────
-router.patch('/:id/estado', [
+router.patch('/:id/estado', requireAuth, [
   body('estado').isIn(['Nueva', 'En revisión', 'Resuelta', 'Falso positivo']).withMessage('Estado no válido'),
 ], async (req, res) => {
   if (!esIdValido(req.params.id)) {
@@ -217,7 +218,7 @@ router.patch('/:id/estado', [
 // Asigna un operador a la alerta
 // Body: { "operador": "diego" }
 // ─────────────────────────────────────────────────────────────────────────────
-router.patch('/:id/operador', [
+router.patch('/:id/operador', requireAuth, [
   body('operador').isLength({ min: 1, max: 50 }).trim().escape().withMessage('Operador requerido y debe ser menor a 50 caracteres'),
 ], async (req, res) => {
   if (!esIdValido(req.params.id)) {
@@ -252,7 +253,7 @@ router.patch('/:id/operador', [
 // ── DELETE /api/alertas/:id ───────────────────────────────────────────────────
 // Elimina una alerta por ID
 // ─────────────────────────────────────────────────────────────────────────────
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   if (!esIdValido(req.params.id)) {
     return res.status(400).json({ error: 'ID no válido' });
   }
