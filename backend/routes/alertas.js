@@ -33,21 +33,12 @@ router.get('/', async (req, res) => {
     if (tipo)      filtro.tipo      = tipo;
     if (origen_ip) filtro.origen_ip = origen_ip;
  
-    const limitNum = Math.min(parseInt(limite), 100); // máximo 100 por página
-    const skip     = (parseInt(pagina) - 1) * limitNum;
- 
-    // Ejecutar consulta y contar total en paralelo
-    const [alertas, total] = await Promise.all([
-      Alerta.find(filtro)
-        .sort({ timestamp: -1 })   // más recientes primero
-        .skip(skip)
-        .limit(limitNum),
-      Alerta.countDocuments(filtro),
-    ]);
+    const limitNum = Math.min(Number.parseInt(limite), 100); // máximo 100 por página
+    const skip     = (Number.parseInt(pagina) - 1) * limitNum;
  
     res.json({
       total,
-      pagina: parseInt(pagina),
+      pagina: Number.parseInt(pagina),
       limite: limitNum,
       paginas: Math.ceil(total / limitNum),
       datos: alertas,

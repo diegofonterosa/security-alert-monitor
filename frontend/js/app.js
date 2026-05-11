@@ -117,7 +117,7 @@ function badgeEstado(estado) {
 // ── Truncar texto largo ───────────────────────────────────────────────────────
 function truncar(texto, max = 90) {
   if (!texto) return '—';
-  const escaped = texto.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escaped = texto.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
   return escaped.length > max ? escaped.slice(0, max) + '…' : escaped;
 }
 
@@ -197,6 +197,8 @@ function renderizarPaginacion({ pagina, paginas }) {
     paginacion.innerHTML = '';
     return;
   }
+  
+  // Mostrar controles de paginación solo si hay más de una página
 
   let html = `
     <button class="page-btn" onclick="irPagina(${pagina - 1})" ${pagina <= 1 ? 'disabled' : ''}>‹ Ant</button>
@@ -271,7 +273,7 @@ async function abrirModal(id) {
       </div>
       <div class="modal-field full">
         <span class="modal-field-label">DESCRIPCIÓN</span>
-        <span class="modal-field-value">${a.descripcion.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+        <span class="modal-field-value">${a.descripcion.replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</span>
       </div>
     `;
 
