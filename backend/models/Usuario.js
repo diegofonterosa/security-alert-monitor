@@ -32,21 +32,22 @@ const UsuarioSchema = new mongoose.Schema(
         // createdAt y updatedAt los gestiona automaticamente timestamps: true
   },
   {
-        timestamps: true, // genera createdAt y updatedAt automaticamente
+        timestamps: true,
   }
   );
 
 // Hash password antes de guardar
+// Reestructurado con condicion afirmativa para evitar code smell de SonarQube (L43)
 UsuarioSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-
-                    try {
-                          const salt = await bcrypt.genSalt(10);
-                          this.password = await bcrypt.hash(this.password, salt);
-                          next();
-                    } catch (error) {
-                          next(error);
-                    }
+    if (this.isModified('password')) {
+          try {
+                  const salt = await bcrypt.genSalt(10);
+                  this.password = await bcrypt.hash(this.password, salt);
+          } catch (error) {
+                  return next(error);
+          }
+    }
+    next();
 });
 
 // Metodo para comparar password
