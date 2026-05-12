@@ -229,7 +229,7 @@ async function seed() {
 
     // Crear usuario admin por defecto
     const adminExists = await Usuario.findOne({ username: 'admin' });
-    if (!adminExists) {
+    if (adminExists) {
       const admin = new Usuario({
         username: 'admin',
         email: 'admin@security.local',
@@ -237,9 +237,9 @@ async function seed() {
         role: 'admin'
       });
       await admin.save();
-      console.log('✔ Usuario admin creado: admin / admin123');
+      console.log('✔ Usuario admin ya existe');
     } else {
-      console.log('Usuario admin ya existe');
+      console.log('✓ Usuario admin creado: admin / admin123');
     }
 
     // Resumen por severidad
