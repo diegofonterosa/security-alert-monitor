@@ -1,35 +1,50 @@
-// backend/middleware/auth.js
-// Fase 6 — Autenticacion JWT para uso domestico
-// Un unico usuario admin configurado por variables de entorno
-
 const jwt = require('jsonwebtoken');
+const Usuario = require('../models/Usuario');
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'cambia_esto_en_produccion_obligatorio';
-const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '8h';
+const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-jwt-super-seguro';
 
-// Verificar token en cabecera Authorization: Bearer <token>
-function requireAuth(req, res, next) {
-    const header = req.headers['authorization'] || '';
-    const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
+// Middleware para verificar token JWT
+const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
-        return res.status(401).json({ error: 'Token requerido. Inicia sesion primero.' });
+    return res.status(401).json({ error: 'Acceso denegado. Token requerido.' });
   }
 
   try {
-        req.usuario = jwt.verify(token, JWT_SECRET);
-        next();
-  } catch (err) {
-        const msg = err.name === 'TokenExpiredError'
-          ? 'Sesion expirada, vuelve a iniciar sesion'
-                : 'Token no valido';
-        return res.status(401).json({ error: msg });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = await Usuario.findById(decoded.id).select('-password');
+    if (!req.user) {
+      return res.status(401).json({ error: 'Token inválido. Usuario no encontrado.' });
+    }
+    next();
+  } catch (error) {
+    return res.status(403).json({ error: 'Token inválido.' });
   }
-}
+};
 
-// Generar token (usado en POST /api/auth/login)
-function generarToken(payload) {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
-}
+// Middleware para verificar rol de admin
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+  }
+  next();
+};
 
-module.exports = { requireAuth, generarToken };
+// Middleware opcional: verificar rol (user o admin)
+const requireRole = (role) => {
+  return (req, res, next) => {
+    if (req.user.role !== role) {
+      return res.status(403).json({ error: `Acceso denegado. Se requiere rol '${role}'.` });
+    }
+    next();
+  };
+};
+
+module.exports = {
+  authenticateToken,
+  requireAdmin,
+  requireRole,
+  JWT_SECRET,
+};

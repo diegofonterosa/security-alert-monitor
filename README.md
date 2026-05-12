@@ -88,11 +88,31 @@ security-alert-monitor/
 
 ---
 
-## 🚀 Endpoints API REST
+## � Modelo de Usuario — Colección `usuarios`
+
+```json
+{
+  "_id": "ObjectId",
+  "username": "admin",
+  "email": "admin@security.local",
+  "password": "hashed_password",
+  "role": "user | admin",
+  "createdAt": "2026-03-11T14:32:00Z",
+  "updatedAt": "2026-03-11T14:32:00Z"
+}
+```
+
+---
+
+## �🚀 Endpoints API REST
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `GET` | `/api/health` | Estado de salud del servicio |
+| `POST` | `/api/auth/register` | Registrar nuevo usuario (solo admin) |
+| `POST` | `/api/auth/login` | Iniciar sesión y obtener token JWT |
+| `GET` | `/api/auth/me` | Obtener información del usuario actual |
+| `GET` | `/api/auth/users` | Listar usuarios (solo admin) |
 | `GET` | `/api/alertas` | Listar todas las alertas (con filtros y paginación) |
 | `GET` | `/api/alertas/stats` | Estadísticas agregadas por severidad y estado |
 | `GET` | `/api/alertas/charts/timeline` | Evolución temporal (últimos 7 días) |
@@ -104,10 +124,9 @@ security-alert-monitor/
 | `PATCH` | `/api/alertas/:id/operador` | Asignar operador a alerta |
 | `DELETE` | `/api/alertas/:id` | Eliminar alerta |
 
----
+## 🔐 Características de Seguridad
 
-## � Características de Seguridad
-
+- **Autenticación JWT**: Tokens JWT con expiración de 24 horas y roles (user/admin)
 - **Rate Limiting**: Límite de 100 solicitudes por IP cada 15 minutos
 - **Validación de Entrada**: Sanitización y validación con express-validator
 - **Prevención XSS**: Escape de HTML en contenido dinámico (backend + frontend)
@@ -127,8 +146,8 @@ security-alert-monitor/
 - [x] **Fase 3** — Dashboard HTML con tabla en vivo
 - [x] **Fase 4** — Filtros por severidad, estado y búsqueda
 - [x] **Fase 5** — Gráficas con Chart.js + aggregation pipeline
-- [ ] **Fase 6** — Autenticación JWT + roles
-- [ ] **Fase 7** — Deploy en Atlas + Render
+- [x] **Fase 6** — Autenticación JWT + roles
+- [x] **Fase 7** — Deploy en Atlas + Render
 - [x] **Fase 8** — Mejoras de seguridad (rate limiting, validación, sanitización)
 
 ---
@@ -156,7 +175,35 @@ npm run dev
 
 ---
 
-## 🔐 Variables de Entorno
+## � Despliegue en Producción
+
+### MongoDB Atlas
+
+1. Crea una cuenta en [MongoDB Atlas](https://www.mongodb.com/atlas)
+2. Crea un nuevo cluster gratuito
+3. Configura un usuario de base de datos y whitelist de IPs (o 0.0.0.0/0 para desarrollo)
+4. Obtén la connection string y actualiza `MONGO_URI` en `.env`
+
+### Render
+
+1. Crea una cuenta en [Render](https://render.com)
+2. Conecta tu repositorio de GitHub
+3. Crea un nuevo **Web Service** con las siguientes configuraciones:
+   - **Runtime**: Node
+   - **Build Command**: (vacío)
+   - **Start Command**: `npm start`
+   - **Environment Variables**: Copia las de tu `.env` (PORT, MONGO_URI, JWT_SECRET, FRONTEND_URL)
+4. Despliega y obtén la URL de tu app
+
+### Configuración Post-Despliegue
+
+1. Actualiza `FRONTEND_URL` en las variables de entorno de Render con la URL de tu app
+2. Ejecuta el seed en producción si es necesario (conecta a Atlas localmente o via SSH)
+3. Usuario admin por defecto: `admin` / `admin123`
+
+---
+
+## �🔐 Variables de Entorno
 
 Crea un archivo `.env` en la raíz basándote en `.env.example`:
 

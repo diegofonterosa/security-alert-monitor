@@ -4,6 +4,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Alerta = require('./models/Alerta');
+const Usuario = require('./models/Usuario');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mini-siem';
 
@@ -225,6 +226,21 @@ async function seed() {
     // Insertar las 20 alertas
     const insertadas = await Alerta.insertMany(alertas);
     console.log(`✔ ${insertadas.length} alertas insertadas correctamente`);
+
+    // Crear usuario admin por defecto
+    const adminExists = await Usuario.findOne({ username: 'admin' });
+    if (!adminExists) {
+      const admin = new Usuario({
+        username: 'admin',
+        email: 'admin@security.local',
+        password: 'admin123', // Se hasheará automáticamente
+        role: 'admin'
+      });
+      await admin.save();
+      console.log('✔ Usuario admin creado: admin / admin123');
+    } else {
+      console.log('Usuario admin ya existe');
+    }
 
     // Resumen por severidad
     const resumen = await Alerta.aggregate([
