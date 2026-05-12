@@ -29,10 +29,10 @@ router.get('/', async (req, res) => {
  
     // Construir filtro dinámicamente solo con los campos que lleguen
     const filtro = {};
-    if (severidad) filtro.severidad = severidad;
-    if (estado)    filtro.estado    = estado;
-    if (tipo)      filtro.tipo      = tipo;
-    if (origen_ip) filtro.origen_ip = origen_ip;
+    const SEVERIDADES=['Baja','Media','Alta','Critica']; if(severidad&&SEVERIDADES.includes(severidad))filtro.severidad=severidad;
+        const ESTADOS=['Nueva','En revision','Resuelta','Falso positivo']; if(estado&&ESTADOS.includes(estado))filtro.estado=estado;
+        const TIPOS=['Acceso no autorizado','Fuerza bruta','Malware detectado','Escaneo de puertos','Escalada de privilegios','DoS/DDoS','Phishing','Movimiento lateral','Anomalia de red']; if(tipo&&TIPOS.includes(tipo))filtro.tipo=tipo;
+    if(origen_ip&&/^(\d{1,3}\.){3}\d{1,3}$/.test(origen_ip))filtro.origen_ip=origen_ip;
  
     const limitNum = Math.min(Number.parseInt(limite), 100); // máximo 100 por página
     const skip     = (Number.parseInt(pagina) - 1) * limitNum;
