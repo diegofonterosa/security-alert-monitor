@@ -44,7 +44,8 @@ console.log(`🚀 Mini-SIEM iniciando en modo: ${NODE_ENV}`);
 if (NODE_ENV === 'production') {
   app.use((req, res, next) => {
     if (req.header('x-forwarded-proto') !== 'https') {
-      res.redirect(307, `${frontendOrigin}${req.originalUrl}`);
+      // Redirigir únicamente a la URL de frontend configurada y no usar datos controlados por el usuario.
+      res.redirect(307, frontendOrigin);
     } else {
       next();
     }
