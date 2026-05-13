@@ -131,15 +131,7 @@ app.use(morgan(NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Rate limiting general: 100 req / 15 min por IP
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: 'Demasiadas solicitudes desde esta IP, intenta mas tarde.',
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => req.path === '/api/health',
-});
+// ── Rate Limiting ─────────────────────────────────────────────────────────────
 
 // Rate limiting estricto para login: 10 intentos / 15 min (anti fuerza bruta)
 const loginLimiter = rateLimit({
@@ -150,6 +142,18 @@ const loginLimiter = rateLimit({
     legacyHeaders: false,
 });
 app.use('/api/auth/login', loginLimiter);
+
+// Rate limiting general: 100 req / 15 min por IP
+// FIX: colocado ANTES de las rutas para que se aplique efectivamente
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Demasiadas solicitudes desde esta IP, intenta mas tarde.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.path === '/api/health',
+});
+app.use('/api/', limiter);
 
 // ── Conexion MongoDB ──────────────────────────────────────────────────────────
 mongoose
@@ -224,4 +228,3 @@ process.on('SIGTERM', () => {
           process.exit(0);
     });
 });
-app.use('/api/', limiter);
