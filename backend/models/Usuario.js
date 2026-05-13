@@ -17,7 +17,20 @@ const UsuarioSchema = new mongoose.Schema(
                 unique: true,
                 trim: true,
                 lowercase: true,
-                match: [/^\S+@\S+\.\S+$/, 'Email no valido'],
+                validate: {
+                    validator: (value) => {
+                        if (typeof value !== 'string') return false;
+                        const parts = value.split('@');
+                        if (parts.length !== 2) return false;
+                        const [local, domain] = parts;
+                        if (!local || !domain) return false;
+                        if (local.includes(' ') || domain.includes(' ')) return false;
+                        if (!domain.includes('.')) return false;
+                        const domainParts = domain.split('.');
+                        return domainParts.every(part => part.length > 0);
+                    },
+                    message: 'Email no valido',
+                },
         },
         password: {
                 type: String,
