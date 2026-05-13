@@ -160,7 +160,7 @@ async function cargarAlertas() {
 
     renderizarTabla(data.datos || []);
     renderizarPaginacion(data);
-    contadorResultados.textContent = `${data.total} resultado${data.total !== 1 ? 's' : ''}`;
+        contadorResultados.textContent = `${data.total} resultado${data.total === 1 ? '' : 's'}`;
 
   } catch (err) {
     tablaBody.innerHTML = `
@@ -181,22 +181,24 @@ function renderizarTabla(alertas) {
     return;
   }
 
-  tablaBody.innerHTML = alertas.map(a => `
-    <tr data-id="${a._id}">
-      <td class="col-ts">${formatTs(a.timestamp)}</td>
-      <td>${badgeSeveridad(a.severidad)}</td>
-      <td>${escaparHTML(a.tipo)}</td>
-      <td class="col-ip mono">${escaparHTML(a.origen_ip)}</td>
-      <td class="col-dispositivo">${escaparHTML(a.dispositivo)}</td>
-      <td class="col-desc">${truncar(a.descripcion)}</td>
-      <td>${badgeEstado(a.estado)}</td>
-      <td class="col-operador">${escaparHTML(a.operador)}</td>
-      <td>
-        <button class="btn-row" data-id="${a._id}">Ver</button>
-      </td>
+        // Usar template para evitar inyección XSS directa via innerHTML
+            const tpl = document.createElement('template');
+                tpl.innerHTML = alertas.map(a => `
+          <tr data-id="${a._id}">
+            <td class="col-ts">${formatTs(a.timestamp)}</td>
+          <td>${badgeSeveridad(a.severidad)}</td>
+          <td>${escaparHTML(a.tipo)}</td>
+          <td class="col-ip mono">${escaparHTML(a.origen_ip)}</td>
+          <td class="col-dispositivo">${escaparHTML(a.dispositivo)}</td>
+          <td class="col-desc">${truncar(a.descripcion)}</td>
+          <td>${badgeEstado(a.estado)}</td>
+          <td class="col-operador">${escaparHTML(a.operador)}</td>
+          <td>
+              <button class="btn-row" data-id="${a._id}">Ver</button>
+    </td>
     </tr>
-  `).join('');
-
+      `).join('');
+          tablaBody.replaceChildren(...tpl.content.childNodes);
   // Click en fila → abrir modal
   tablaBody.querySelectorAll('tr[data-id]').forEach(fila => {
     fila.addEventListener('click', () => abrirModal(fila.dataset.id));
@@ -206,7 +208,7 @@ function renderizarTabla(alertas) {
 // ── Renderizar paginación ─────────────────────────────────────────────────────
 function renderizarPaginacion({ pagina, paginas }) {
   if (!paginas || paginas <= 1) {
-    paginacion.innerHTML = '';
+        paginacion.replaceChildren();
     return;
   }
   
@@ -231,8 +233,9 @@ function renderizarPaginacion({ pagina, paginas }) {
     <button class="page-btn" onclick="irPagina(${pagina + 1})" ${pagina >= paginas ? 'disabled' : ''}>Sig ›</button>
   `;
 
-  paginacion.innerHTML = html;
-}
+  const paginTpl = document.createElement('template');
+    paginTpl.innerHTML = html;
+    paginacion.replaceChildren(...paginTpl.content.childNodes);
 
 function irPagina(n) {
   state.pagina = n;
