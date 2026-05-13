@@ -44,33 +44,30 @@ router.get('/', authenticateToken, [
   try {
     const { severidad, estado, tipo, origen_ip, limite = 50, pagina = 1 } = req.query;
  
-    // Construcción segura del filtro: solo campos explícitamente permitidos y validados
-    const filtro = {};
-    
-    // Mapeo explícito de campos permitidos con sus valores válidos
-    const severidadesValidas = ['Baja', 'Media', 'Alta', 'Crítica'];
-    if (severidad && severidadesValidas.includes(severidad)) {
-      filtro.severidad = severidad;
-    }
-    
-    const estadosValidos = ['Nueva', 'En revisión', 'Resuelta', 'Falso positivo'];
-    if (estado && estadosValidos.includes(estado)) {
-      filtro.estado = estado;
-    }
-    
-    const tiposValidos = [
-      'Acceso no autorizado', 'Fuerza bruta', 'Malware detectado', 'Exfiltración de datos',
-      'Escaneo de puertos', 'Escalada de privilegios', 'DoS/DDoS', 'Phishing',
-      'Movimiento lateral', 'Anomalía de red',
-    ];
-    if (tipo && tiposValidos.includes(tipo)) {
-      filtro.tipo = tipo;
-    }
-    
-    // origen_ip ya fue validado por isIP() validator
-    if (origen_ip) {
-      filtro.origen_ip = origen_ip;
-    }
+        // Mapas de valores permitidos: el valor proviene del mapa, nunca del usuario directamente
+       const MAPA_SEVERIDADES = { 'Baja': 'Baja', 'Media': 'Media', 'Alta': 'Alta', 'Crítica': 'Crítica' };
+       const MAPA_ESTADOS = { 'Nueva': 'Nueva', 'En revisión': 'En revisión', 'Resuelta': 'Resuelta', 'Falso positivo': 'Falso positivo' };
+       const MAPA_TIPOS = {
+              'Acceso no autorizado': 'Acceso no autorizado',
+              'Fuerza bruta': 'Fuerza bruta',
+              'Malware detectado': 'Malware detectado',
+              'Exfiltración de datos': 'Exfiltración de datos',
+              'Escaneo de puertos': 'Escaneo de puertos',
+              'Escalada de privilegios': 'Escalada de privilegios',
+              'DoS/DDoS': 'DoS/DDoS',
+              'Phishing': 'Phishing',
+              'Movimiento lateral': 'Movimiento lateral',
+              'Anomalía de red': 'Anomalía de red',
+       };
+
+       // Construcción segura del filtro: valores provienen de mapas predefinidos
+       const filtro = {
+              ...(severidad && MAPA_SEVERIDADES[severidad] && { severidad: MAPA_SEVERIDADES[severidad] }),
+              ...(estado && MAPA_ESTADOS[estado] && { estado: MAPA_ESTADOS[estado] }),
+              ...(tipo && MAPA_TIPOS[tipo] && { tipo: MAPA_TIPOS[tipo] }),
+              // origen_ip fue validado por isIP() — se usa como literal de igualdad
+              ...(origen_ip && { origen_ip: { $eq: origen_ip } }),
+       };
  
     const limitNum = Math.min(Number.parseInt(limite, 10), 100);
     const skip     = (Math.max(Number.parseInt(pagina, 10), 1) - 1) * limitNum;
