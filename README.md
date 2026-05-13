@@ -121,7 +121,7 @@ El proyecto utiliza credenciales de administrador configuradas en variables de e
 - **Prevención de Mass Assignment**: Whitelist explícita de campos permitidos en POST
 - **Headers de Seguridad**: Configurados con Helmet (HSTS, CSP, etc.)
 - **Subresource Integrity**: SRI en recursos externos (Google Fonts)
-- **Control CORS**: Solo permite orígenes locales
+- **Control CORS**: Solo permite el origen autorizado en producción y localhost en desarrollo
 - **Logging**: Registro de solicitudes HTTP con Morgan
 - **Límite de Tamaño**: Body limitado a 10MB para prevenir DoS
 - **Accesibilidad**: Labels y elementos form correctamente asociados
@@ -254,20 +254,27 @@ npm run dev
 
 ### Configuración Post-Despliegue
 
-1. Actualiza `FRONTEND_URL` en las variables de entorno de Render con la URL de tu app
-2. Ejecuta el seed en producción si es necesario (conecta a Atlas localmente o via SSH)
-3. Usuario admin por defecto: `admin` / `admin123`
+1. Actualiza `FRONTEND_URL` en las variables de entorno de Render con la URL HTTPS de tu app (por ejemplo, `https://mi-app.onrender.com`).
+2. `FRONTEND_URL` debe ser una URL HTTPS válida en producción para que CORS y la redirección funcionen correctamente.
+3. Ejecuta el seed en producción si es necesario (conecta a Atlas localmente o via SSH).
+4. Usuario admin por defecto: `admin` / `admin123`
 
 ---
 
-## �🔐 Variables de Entorno
+## 🔐 Variables de Entorno
 
 Crea un archivo `.env` en la raíz basándote en `.env.example`:
 
 ```env
 PORT=3000
 MONGO_URI=mongodb+srv://<usuario>:<password>@cluster.mongodb.net/mini-siem
+JWT_SECRET=una_clave_segura
+ADMIN_USER=admin
+ADMIN_HASH=<hash_bcrypt>
+FRONTEND_URL=https://mi-app.onrender.com
 ```
+
+> En producción, `FRONTEND_URL` debe ser una URL HTTPS válida. En desarrollo se usa `http://localhost:3000` por defecto si no se define.
 
 ---
 

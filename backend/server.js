@@ -25,18 +25,26 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mini-siem'
 const NODE_ENV  = process.env.NODE_ENV  || 'development';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-if (NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
-  console.error('❌ ERROR CRÍTICO: FRONTEND_URL es obligatorio en producción.');
-  process.exit(1);
-}
-
 const frontendOrigin = (() => {
   try {
     return new URL(FRONTEND_URL).origin;
   } catch {
-    return FRONTEND_URL;
+    return '';
   }
 })();
+
+if (NODE_ENV === 'production') {
+  if (!process.env.FRONTEND_URL) {
+    console.error('❌ ERROR CRÍTICO: FRONTEND_URL es obligatorio en producción.');
+    process.exit(1);
+  }
+
+  if (!frontendOrigin || !frontendOrigin.startsWith('https://')) {
+    console.error('❌ ERROR CRÍTICO: FRONTEND_URL debe ser una URL HTTPS válida en producción.');
+    console.error(`  FRONTEND_URL="${FRONTEND_URL}"`);
+    process.exit(1);
+  }
+}
 
 console.log(`🚀 Mini-SIEM iniciando en modo: ${NODE_ENV}`);
 
@@ -76,12 +84,12 @@ app.use(helmet({
 }));
 
 // ── Middleware: CORS ───────────────────────────────────────────────────────────
-// En producción: solo acepta FRONTEND_URL
+// En producción: solo acepta el origen HTTPS configurado en FRONTEND_URL
 // En desarrollo: localhost
 app.use(cors({
     origin: NODE_ENV === 'production'
-      ? process.env.FRONTEND_URL
-          : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+      ? frontendOrigin
+      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: false,
