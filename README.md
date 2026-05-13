@@ -257,7 +257,7 @@ npm run dev
 1. Actualiza `FRONTEND_URL` en las variables de entorno de Render con la URL HTTPS de tu app (por ejemplo, `https://mi-app.onrender.com`).
 2. `FRONTEND_URL` debe ser una URL HTTPS válida en producción para que CORS y la redirección funcionen correctamente.
 3. Ejecuta el seed en producción si es necesario (conecta a Atlas localmente o via SSH).
-4. Usuario admin por defecto: `admin` / `admin123`
+4. Configura `ADMIN_USER` y `ADMIN_HASH` en tus variables de entorno; no hay credenciales codificadas en el código.
 
 ---
 
