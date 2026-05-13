@@ -19,22 +19,36 @@ if (missingVars.length > 0) {
     process.exit(1);
 }
 
-const app      = express();
-const PORT     = process.env.PORT     || 3000;
+const app       = express();
+const PORT      = process.env.PORT      || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mini-siem';
-const NODE_ENV = process.env.NODE_ENV  || 'development';
+const NODE_ENV  = process.env.NODE_ENV  || 'development';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+if (NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
+  console.error('❌ ERROR CRÍTICO: FRONTEND_URL es obligatorio en producción.');
+  process.exit(1);
+}
+
+const frontendOrigin = (() => {
+  try {
+    return new URL(FRONTEND_URL).origin;
+  } catch {
+    return FRONTEND_URL;
+  }
+})();
 
 console.log(`🚀 Mini-SIEM iniciando en modo: ${NODE_ENV}`);
 
 // ── Middleware: Forzar HTTPS en producción ─────────────────────────────────────
 if (NODE_ENV === 'production') {
-    app.use((req, res, next) => {
-          if (req.header('x-forwarded-proto') === 'https') {
-                  next();
-          } else {
-                  res.redirect(301, `https://${req.hostname}${req.url}`);
-          }
-    });
+  app.use((req, res, next) => {
+    if (req.header('x-forwarded-proto') !== 'https') {
+      res.redirect(307, `${frontendOrigin}${req.originalUrl}`);
+    } else {
+      next();
+    }
+  });
 }
 
 // ── Middleware: Seguridad HTTP Headers ─────────────────────────────────────────
