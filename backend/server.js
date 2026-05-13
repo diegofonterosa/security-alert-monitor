@@ -39,7 +39,7 @@ if (NODE_ENV === 'production') {
     process.exit(1);
   }
 
-  if (frontendOrigin?.startsWith('https://') !== true) {
+  if (!frontendOrigin?.startsWith('https://')) {
     console.error('❌ ERROR CRÍTICO: FRONTEND_URL debe ser una URL HTTPS válida en producción.');
     console.error(`  FRONTEND_URL="${FRONTEND_URL}"`);
     process.exit(1);
