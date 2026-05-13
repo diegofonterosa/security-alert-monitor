@@ -90,7 +90,7 @@ security-alert-monitor/
 
 ## 👤 Autenticación
 
-El proyecto utiliza credenciales de administrador configuradas en variables de entorno (`ADMIN_USER` y `ADMIN_HASH`) y no mantiene una colección de usuarios en la base de datos.
+El proyecto utiliza un modelo `Usuario` para gestionar usuarios y dispone de un script de seed que puede crear un administrador por defecto. La API de login se valida con credenciales de administrador definidas en variables de entorno (`ADMIN_USER` y `ADMIN_HASH`).
 
 ---
 
