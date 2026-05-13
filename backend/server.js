@@ -2,39 +2,39 @@
 // Seguridad mejorada: validación de env, CORS, Rate Limiting, Helmet, Logging
 
 require('dotenv').config();
-const express   = require('express');
-const mongoose  = require('mongoose');
-const path      = require('node:path');
-const rateLimit = require('express-rate-limit');
-const cors      = require('cors');
-const morgan    = require('morgan');
-const helmet    = require('helmet');
+const express    = require('express');
+const mongoose   = require('mongoose');
+const path       = require('node:path');
+const rateLimit  = require('express-rate-limit');
+const cors       = require('cors');
+const morgan     = require('morgan');
+const helmet     = require('helmet');
 
 // ── Validación de variables de entorno críticas ────────────────────────────────
 const requiredEnvVars = ['JWT_SECRET', 'ADMIN_USER', 'ADMIN_HASH'];
 const missingVars = requiredEnvVars.filter(v => !process.env[v]);
 if (missingVars.length > 0) {
-  console.error(`❌ ERROR CRÍTICO: Variables de entorno faltantes: ${missingVars.join(', ')}`);
-  console.error('   Copia .env.example a .env y rellena los valores.');
-  process.exit(1);
+    console.error(`❌ ERROR CRÍTICO: Variables de entorno faltantes: ${missingVars.join(', ')}`);
+    console.error('  Copia .env.example a .env y rellena los valores.');
+    process.exit(1);
 }
 
-const app       = express();
-const PORT      = process.env.PORT      || 3000;
+const app      = express();
+const PORT     = process.env.PORT     || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mini-siem';
-const NODE_ENV  = process.env.NODE_ENV  || 'development';
+const NODE_ENV = process.env.NODE_ENV  || 'development';
 
 console.log(`🚀 Mini-SIEM iniciando en modo: ${NODE_ENV}`);
 
 // ── Middleware: Forzar HTTPS en producción ─────────────────────────────────────
 if (NODE_ENV === 'production') {
-  app.use((req, res, next) => {
-    if (req.header('x-forwarded-proto') !== 'https') {
-      res.redirect(`https://${req.header('host')}${req.url}`);
-    } else {
-      next();
-    }
-  });
+    app.use((req, res, next) => {
+          if (req.header('x-forwarded-proto') === 'https') {
+                  next();
+          } else {
+                  res.redirect(301, `https://${req.hostname}${req.url}`);
+          }
+    });
 }
 
 // ── Middleware: Seguridad HTTP Headers ─────────────────────────────────────────
@@ -54,9 +54,9 @@ app.use(helmet({
           includeSubDomains: true,
           preload: true,
     },
-    frameguard: { action: 'deny' },         // X-Frame-Options: DENY
-    xssFilter: true,                        // X-XSS-Protection
-    noSniff: true,                          // X-Content-Type-Options: nosniff
+    frameguard: { action: 'deny' }, // X-Frame-Options: DENY
+    xssFilter: true,                // X-XSS-Protection
+    noSniff: true,                  // X-Content-Type-Options: nosniff
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
@@ -78,7 +78,7 @@ const securityLog = (req, res, next) => {
     const origSend = res.send;
     res.send = function(data) {
           const statusCode = res.statusCode;
-          
+
           // Log errores de autenticación (401, 403)
           if (statusCode === 401) {
                   console.warn(`[AUTH_FAIL] ${req.method} ${req.path} - IP: ${req.ip}`);
@@ -86,17 +86,17 @@ const securityLog = (req, res, next) => {
           if (statusCode === 403) {
                   console.warn(`[FORBIDDEN] ${req.method} ${req.path} - IP: ${req.ip}`);
           }
-          
+
           // Log errores generales (5xx)
           if (statusCode >= 500) {
                   console.error(`[ERROR] ${req.method} ${req.path} - Status: ${statusCode} - IP: ${req.ip}`);
           }
-          
+
           // Log intentos de rate limit
           if (statusCode === 429) {
                   console.error(`[ATTACK] Rate limit excedido - IP: ${req.ip} - Path: ${req.path}`);
           }
-          
+
           res.send = origSend;
           return res.send(data);
     };
@@ -117,7 +117,6 @@ const limiter = rateLimit({
     legacyHeaders: false,
     skip: (req) => req.path === '/api/health',
 });
-app.use('/api/', limiter);
 
 // Rate limiting estricto para login: 10 intentos / 15 min (anti fuerza bruta)
 const loginLimiter = rateLimit({
@@ -140,7 +139,7 @@ mongoose
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
 app.use('/api/alertas', require('./routes/alertas'));
-app.use('/api/auth',    require('./routes/auth'));      // Fase 6: autenticacion JWT
+app.use('/api/auth', require('./routes/auth')); // Fase 6: autenticacion JWT
 
 // ── Ruta de salud ─────────────────────────────────────────────────────────────
 // FIX Fase 5: ahora devuelve db: 'conectado' para que el indicador del dashboard funcione
@@ -149,11 +148,11 @@ app.get('/api/health', (req, res) => {
       ? 'conectado'
           : 'desconectado';
 
-          res.json({
-                status:    'OK',
-                db:        estadoDB,
-                timestamp: new Date().toISOString(),
-          });
+    res.json({
+          status: 'OK',
+          db: estadoDB,
+          timestamp: new Date().toISOString(),
+    });
 });
 
 // ── Fallback — servir index.html para rutas no API ────────────────────────────
@@ -164,15 +163,15 @@ app.get('*', (req, res) => {
 // ── Middleware: Error Handler Global ───────────────────────────────────────────
 app.use((err, req, res, next) => {
     console.error(`[ERROR] ${err.message}`, err.stack);
-    
+
     // No exponer detalles técnicos en producción
-    const message = NODE_ENV === 'production' 
-        ? 'Error interno del servidor' 
-        : err.message;
-    
+    const message = NODE_ENV === 'production'
+      ? 'Error interno del servidor'
+          : err.message;
+
     res.status(err.status || 500).json({
-        error: message,
-        ...(NODE_ENV === 'development' && { stack: err.stack }),
+          error: message,
+          ...(NODE_ENV === 'development' && { stack: err.stack }),
     });
 });
 
@@ -187,18 +186,19 @@ const server = app.listen(PORT, () => {
 process.on('SIGINT', () => {
     console.log('\n🛑 Señal SIGINT recibida. Cerrando servidor...');
     server.close(() => {
-        console.log('✅ Servidor cerrado.');
-        mongoose.connection.close(() => {
-            console.log('✅ Conexión MongoDB cerrada.');
-            process.exit(0);
-        });
+          console.log('✅ Servidor cerrado.');
+          mongoose.connection.close(() => {
+                  console.log('✅ Conexión MongoDB cerrada.');
+                  process.exit(0);
+          });
     });
 });
 
 process.on('SIGTERM', () => {
     console.log('\n🛑 Señal SIGTERM recibida. Cerrando servidor...');
     server.close(() => {
-        mongoose.connection.close();
-        process.exit(0);
+          mongoose.connection.close();
+          process.exit(0);
     });
 });
+app.use('/api/', limiter);
