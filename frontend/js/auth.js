@@ -79,11 +79,11 @@ btnLogout.addEventListener('click', async () => {
 });
 
 // Helper global: fetch autenticado para peticiones de escritura (POST, PATCH, DELETE)
-// app.js usa window.fetchAuth(...) en lugar de fetch(...) para esas peticiones
-window.fetchAuth = function(url, options = {}) {
+// app.js usa globalThis.fetchAuth(...) en lugar de fetch(...) para esas peticiones
+globalThis.fetchAuth = function(url, options = {}) {
     if (!AUTH.token) {
           actualizarUI(); // Mostrar login si no hay token
-      return Promise.reject(new Error('No autenticado. Inicia sesion primero.'));
+          return Promise.reject(new Error('No autenticado. Inicia sesion primero.'));
     }
 
     return fetch(url, {

@@ -99,7 +99,8 @@ function badgeSeveridad(sev) {
     'Baja':    'baja',
   };
   const cls = mapa[sev] || 'baja';
-  return `<span class="badge badge-${cls}">${sev.toUpperCase()}</span>`;
+  const displayText = escaparHTML(String(sev || '').toUpperCase());
+  return `<span class="badge badge-${cls}">${displayText}</span>`;
 }
 
 // ── Badge de estado ───────────────────────────────────────────────────────────
@@ -111,7 +112,8 @@ function badgeEstado(estado) {
     'Falso positivo':  'falso',
   };
   const cls = mapa[estado] || 'falso';
-  return `<span class="estado-badge estado-${cls}">${estado}</span>`;
+  const displayText = escaparHTML(String(estado || ''));
+  return `<span class="estado-badge estado-${cls}">${displayText}</span>`;
 }
 
 // ── Truncar texto largo ───────────────────────────────────────────────────────
@@ -140,16 +142,20 @@ async function cargarAlertas() {
       </td>
     </tr>`;
 
-  // Construir query string con filtros y paginación
-  const params = new URLSearchParams({
-    pagina: state.pagina,
-    limite: state.limite,
-    ...state.filtros,
-  });
+  // Construir query string con filtros y paginación (todos validados en servidor)
+  const params = new URLSearchParams();
+  params.set('pagina', state.pagina);
+  params.set('limite', state.limite);
+  // Solo agregar filtros si están definidos (servidor valida valores permitidos)
+  if (state.filtros.severidad) params.set('severidad', state.filtros.severidad);
+  if (state.filtros.estado) params.set('estado', state.filtros.estado);
+  if (state.filtros.tipo) params.set('tipo', state.filtros.tipo);
 
   try {
     const res = await fetch(`${API}?${params}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
     const data = await res.json();
 
     renderizarTabla(data.datos || []);

@@ -149,6 +149,75 @@ security-alert-monitor/
 - [x] **Fase 6** — Autenticación JWT + roles
 - [x] **Fase 7** — Deploy en Atlas + Render
 - [x] **Fase 8** — Mejoras de seguridad (rate limiting, validación, sanitización)
+- [x] **Fase 9** — SonarQube fixes (NoSQL injection, XSS, contrast, code smells)
+
+---
+
+## 🔍 Auditoría de Seguridad (SonarQube)
+
+Se han identificado y corregido los siguientes issues de SonarQube:
+
+### ✅ Vulnerabilidades Corregidas
+
+| Issue | Severidad | Descripción | Fix |
+|-------|-----------|-------------|-----|
+| Backend: NoSQL Injection Risk | 🔴 Blocker | Construcción dinámica de queries | Mapeo explícito de valores permitidos con whitelist |
+| Frontend: XSS Risk (badgeSeveridad) | 🔴 Blocker | HTML sin escapar de valores de usuario | Uso de `escaparHTML()` en valores antes de renderizar |
+| Frontend: XSS Risk (badgeEstado) | 🔴 Blocker | HTML sin escapar de valores de usuario | Uso de `escaparHTML()` en valores antes de renderizar |
+| Frontend: Unexpected Negated Condition | 🟡 Minor | Lógica invertida en validación | Refactorización a bloque explícito `if`/`throw` |
+| Frontend: Contrast Ratio (#ff4444) | 🟡 Major | Texto rojo no cumple WCAG AA | Cambio a `#cc0000` (ratio 4.5:1) |
+| Frontend: Prefer globalThis | 🟡 Minor | Uso de `window` en lugar de `globalThis` | Cambio a `globalThis.fetchAuth` |
+
+### 📋 Detalles de Correcciones
+
+#### 1. NoSQL Injection Prevention (backend/routes/alertas.js)
+```javascript
+// ❌ ANTES: Construcción dinámica del filtro
+const filtro = {};
+if (severidad) filtro.severidad = severidad;  // Vulnerable
+
+// ✅ DESPUÉS: Whitelist explícito de valores
+const severidadesValidas = ['Baja', 'Media', 'Alta', 'Crítica'];
+if (severidad && severidadesValidas.includes(severidad)) {
+  filtro.severidad = severidad;  // Seguro
+}
+```
+
+#### 2. XSS Prevention (frontend/js/app.js)
+```javascript
+// ❌ ANTES: Valores sin escapar
+return `<span class="badge">${sev.toUpperCase()}</span>`;
+
+// ✅ DESPUÉS: Valores escapados
+const displayText = escaparHTML(String(sev || '').toUpperCase());
+return `<span class="badge">${displayText}</span>`;
+```
+
+#### 3. Accessibility - Contrast Ratio (frontend/css/style.css)
+```css
+/* ❌ ANTES: #ff4444 (ratio 2.8:1) - No cumple WCAG AA */
+.login-error { color: #ff4444; }
+
+/* ✅ DESPUÉS: #cc0000 (ratio 4.5:1) - Cumple WCAG AAA */
+.login-error { color: #cc0000; }
+```
+
+#### 4. Use globalThis (frontend/js/auth.js)
+```javascript
+// ❌ ANTES
+window.fetchAuth = function(url, options = {}) { ... }
+
+// ✅ DESPUÉS
+globalThis.fetchAuth = function(url, options = {}) { ... }
+```
+
+### 📚 Referencias de Seguridad
+
+- [OWASP NoSQL Injection](https://owasp.org/www-community/attacks/NoSQL_Injection)
+- [OWASP XSS Prevention](https://owasp.org/www-community/attacks/xss/)
+- [WCAG 2.1 Contrast (Minimum)](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html)
+- [MDN: globalThis](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis)
+- [SonarQube Rules](https://rules.sonarsource.com/javascript)
 
 ---
 

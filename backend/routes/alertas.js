@@ -44,17 +44,38 @@ router.get('/', authenticateToken, [
   try {
     const { severidad, estado, tipo, origen_ip, limite = 50, pagina = 1 } = req.query;
  
-    // Construir filtro dinámicamente solo con los campos que lleguen
+    // Construcción segura del filtro: solo campos explícitamente permitidos y validados
     const filtro = {};
-    if (severidad) filtro.severidad = severidad;
-    if (estado)    filtro.estado    = estado;
-    if (tipo)      filtro.tipo      = tipo;
-    if (origen_ip) filtro.origen_ip = origen_ip;
+    
+    // Mapeo explícito de campos permitidos con sus valores válidos
+    const severidadesValidas = ['Baja', 'Media', 'Alta', 'Crítica'];
+    if (severidad && severidadesValidas.includes(severidad)) {
+      filtro.severidad = severidad;
+    }
+    
+    const estadosValidos = ['Nueva', 'En revisión', 'Resuelta', 'Falso positivo'];
+    if (estado && estadosValidos.includes(estado)) {
+      filtro.estado = estado;
+    }
+    
+    const tiposValidos = [
+      'Acceso no autorizado', 'Fuerza bruta', 'Malware detectado', 'Exfiltración de datos',
+      'Escaneo de puertos', 'Escalada de privilegios', 'DoS/DDoS', 'Phishing',
+      'Movimiento lateral', 'Anomalía de red',
+    ];
+    if (tipo && tiposValidos.includes(tipo)) {
+      filtro.tipo = tipo;
+    }
+    
+    // origen_ip ya fue validado por isIP() validator
+    if (origen_ip) {
+      filtro.origen_ip = origen_ip;
+    }
  
     const limitNum = Math.min(Number.parseInt(limite, 10), 100);
     const skip     = (Math.max(Number.parseInt(pagina, 10), 1) - 1) * limitNum;
  
-    // Ejecutar consulta y contar total en paralelo
+    // Ejecutar consulta y contar total en paralelo (Mongoose asegura validación de tipo)
     const [alertas, total] = await Promise.all([
       Alerta.find(filtro)
         .sort({ timestamp: -1 })   // más recientes primero
@@ -65,7 +86,7 @@ router.get('/', authenticateToken, [
  
     res.json({
       total,
-      pagina: Number.parseInt(pagina),
+      pagina: Number.parseInt(pagina, 10),
       limite: limitNum,
       paginas: Math.ceil(total / limitNum),
       datos: alertas,
