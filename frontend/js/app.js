@@ -309,7 +309,7 @@ btnGuardarEstado.addEventListener('click', async () => {
   btnGuardarEstado.disabled = true;
 
   try {
-    const res = await fetchAuthAuth(`${API}/${state.alertaActiva}/estado`, {
+    const res = await fetchAuth(`${API}/${state.alertaActiva}/estado`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ estado: modalEstado.value }),
