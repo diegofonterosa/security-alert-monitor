@@ -1,5 +1,5 @@
 // server.js — Mini-SIEM Personal
-// Fases 1-8 completas
+// Seguridad mejorada: validación de env, CORS, Rate Limiting, Helmet, Logging
 
 require('dotenv').config();
 const express   = require('express');
@@ -10,11 +10,34 @@ const cors      = require('cors');
 const morgan    = require('morgan');
 const helmet    = require('helmet');
 
+// ── Validación de variables de entorno críticas ────────────────────────────────
+const requiredEnvVars = ['JWT_SECRET', 'ADMIN_USER', 'ADMIN_HASH'];
+const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error(`❌ ERROR CRÍTICO: Variables de entorno faltantes: ${missingVars.join(', ')}`);
+  console.error('   Copia .env.example a .env y rellena los valores.');
+  process.exit(1);
+}
+
 const app       = express();
 const PORT      = process.env.PORT      || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mini-siem';
+const NODE_ENV  = process.env.NODE_ENV  || 'development';
 
-// ── Middleware ────────────────────────────────────────────────────────────────
+console.log(`🚀 Mini-SIEM iniciando en modo: ${NODE_ENV}`);
+
+// ── Middleware: Forzar HTTPS en producción ─────────────────────────────────────
+if (NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.header('x-forwarded-proto') !== 'https') {
+      res.redirect(`https://${req.header('host')}${req.url}`);
+    } else {
+      next();
+    }
+  });
+}
+
+// ── Middleware: Seguridad HTTP Headers ─────────────────────────────────────────
 app.use(helmet({
     contentSecurityPolicy: {
           directives: {
@@ -27,15 +50,21 @@ app.use(helmet({
           },
     },
     hsts: {
-          maxAge: 31536000,
+          maxAge: 31536000, // 1 año
           includeSubDomains: true,
           preload: true,
     },
+    frameguard: { action: 'deny' },         // X-Frame-Options: DENY
+    xssFilter: true,                        // X-XSS-Protection
+    noSniff: true,                          // X-Content-Type-Options: nosniff
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
-// CORS — en produccion solo acepta FRONTEND_URL, en dev acepta localhost
+// ── Middleware: CORS ───────────────────────────────────────────────────────────
+// En producción: solo acepta FRONTEND_URL
+// En desarrollo: localhost
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production'
+    origin: NODE_ENV === 'production'
       ? process.env.FRONTEND_URL
           : ['http://localhost:3000', 'http://127.0.0.1:3000'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
@@ -44,16 +73,30 @@ app.use(cors({
     maxAge: 600,
 }));
 
-// Logging de eventos de seguridad
+// ── Middleware: Security Event Logging ─────────────────────────────────────────
 const securityLog = (req, res, next) => {
     const origSend = res.send;
     res.send = function(data) {
-          if (res.statusCode >= 400) {
-                  console.warn(`[SECURITY] ${req.method} ${req.path} - Status: ${res.statusCode} - IP: ${req.ip}`);
+          const statusCode = res.statusCode;
+          
+          // Log errores de autenticación (401, 403)
+          if (statusCode === 401) {
+                  console.warn(`[AUTH_FAIL] ${req.method} ${req.path} - IP: ${req.ip}`);
           }
-          if (res.statusCode === 429) {
-                  console.error(`[ATTACK] Rate limit excedido - IP: ${req.ip}`);
+          if (statusCode === 403) {
+                  console.warn(`[FORBIDDEN] ${req.method} ${req.path} - IP: ${req.ip}`);
           }
+          
+          // Log errores generales (5xx)
+          if (statusCode >= 500) {
+                  console.error(`[ERROR] ${req.method} ${req.path} - Status: ${statusCode} - IP: ${req.ip}`);
+          }
+          
+          // Log intentos de rate limit
+          if (statusCode === 429) {
+                  console.error(`[ATTACK] Rate limit excedido - IP: ${req.ip} - Path: ${req.path}`);
+          }
+          
           res.send = origSend;
           return res.send(data);
     };
@@ -61,7 +104,7 @@ const securityLog = (req, res, next) => {
 };
 
 app.use(securityLog);
-app.use(morgan('combined'));
+app.use(morgan(NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
@@ -118,7 +161,44 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
+// ── Middleware: Error Handler Global ───────────────────────────────────────────
+app.use((err, req, res, next) => {
+    console.error(`[ERROR] ${err.message}`, err.stack);
+    
+    // No exponer detalles técnicos en producción
+    const message = NODE_ENV === 'production' 
+        ? 'Error interno del servidor' 
+        : err.message;
+    
+    res.status(err.status || 500).json({
+        error: message,
+        ...(NODE_ENV === 'development' && { stack: err.stack }),
+    });
+});
+
 // ── Arrancar servidor ─────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-    console.log(`Servidor Mini-SIEM corriendo en http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+    console.log(`✅ Servidor Mini-SIEM corriendo en http://localhost:${PORT}`);
+    console.log(`   Modo: ${NODE_ENV}`);
+    console.log(`   MongoDB: ${MONGO_URI.replace(/:[^:]*@/, ':****@')}`);
+});
+
+// ── Graceful Shutdown ────────────────────────────────────────────────────────────
+process.on('SIGINT', () => {
+    console.log('\n🛑 Señal SIGINT recibida. Cerrando servidor...');
+    server.close(() => {
+        console.log('✅ Servidor cerrado.');
+        mongoose.connection.close(() => {
+            console.log('✅ Conexión MongoDB cerrada.');
+            process.exit(0);
+        });
+    });
+});
+
+process.on('SIGTERM', () => {
+    console.log('\n🛑 Señal SIGTERM recibida. Cerrando servidor...');
+    server.close(() => {
+        mongoose.connection.close();
+        process.exit(0);
+    });
 });

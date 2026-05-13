@@ -4,9 +4,9 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const { body, validationResult } = require('express-validator');
+const { body, query, validationResult } = require('express-validator');
 const Alerta = require('../models/Alerta');
-const { requireAuth } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
  
 // ── Helper: validar ObjectId ──────────────────────────────────────────────────
 function esIdValido(id) {
@@ -14,16 +14,33 @@ function esIdValido(id) {
 }
  
 // ── GET /api/alertas ──────────────────────────────────────────────────────────
-// Devuelve todas las alertas. Admite filtros por query string:
+// REQUIERE AUTENTICACION. Devuelve todas las alertas del usuario autenticado.
+// Admite filtros por query string:
 //   ?severidad=Alta
 //   ?estado=Nueva
 //   ?tipo=Phishing
 //   ?origen_ip=192.168.1.55
-//   ?limite=10          (por defecto 50)
+//   ?limite=10          (por defecto 50, máximo 100)
 //   ?pagina=2           (paginación)
 // Ejemplo: GET /api/alertas?severidad=Crítica&estado=Nueva&limite=5
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, [
+  query('severidad').optional().isIn(['Baja', 'Media', 'Alta', 'Crítica']).withMessage('Severidad no válida'),
+  query('estado').optional().isIn(['Nueva', 'En revisión', 'Resuelta', 'Falso positivo']).withMessage('Estado no válido'),
+  query('tipo').optional().isIn([
+    'Acceso no autorizado', 'Fuerza bruta', 'Malware detectado', 'Exfiltración de datos',
+    'Escaneo de puertos', 'Escalada de privilegios', 'DoS/DDoS', 'Phishing',
+    'Movimiento lateral', 'Anomalía de red',
+  ]).withMessage('Tipo de alerta no válido'),
+  query('origen_ip').optional().isIP().withMessage('IP no válida'),
+  query('limite').optional().isInt({ min: 1, max: 100 }).withMessage('Límite debe estar entre 1 y 100'),
+  query('pagina').optional().isInt({ min: 1 }).withMessage('Página debe ser positiva'),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Parámetros no válidos', detalle: errors.array() });
+  }
+
   try {
     const { severidad, estado, tipo, origen_ip, limite = 50, pagina = 1 } = req.query;
  
@@ -34,8 +51,8 @@ router.get('/', async (req, res) => {
     if (tipo)      filtro.tipo      = tipo;
     if (origen_ip) filtro.origen_ip = origen_ip;
  
-    const limitNum = Math.min(Number.parseInt(limite), 100); // máximo 100 por página
-    const skip     = (Number.parseInt(pagina) - 1) * limitNum;
+    const limitNum = Math.min(Number.parseInt(limite, 10), 100);
+    const skip     = (Math.max(Number.parseInt(pagina, 10), 1) - 1) * limitNum;
  
     // Ejecutar consulta y contar total en paralelo
     const [alertas, total] = await Promise.all([
@@ -55,15 +72,19 @@ router.get('/', async (req, res) => {
     });
  
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener alertas', detalle: error.message });
+    // En producción (NODE_ENV === 'production'), no exponer detalles de error
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al obtener alertas', ...(detalle && { detalle }) });
   }
 });
- 
+
 // ── GET /api/alertas/stats ────────────────────────────────────────────────────
-// Resumen estadístico: totales por severidad y por estado
+// REQUIERE AUTENTICACION. Resumen estadístico: totales por severidad y por estado
 // Útil para el dashboard
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/stats', async (req, res) => {
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const [porSeveridad, porEstado, porTipo] = await Promise.all([
       Alerta.aggregate([
@@ -89,14 +110,17 @@ router.get('/stats', async (req, res) => {
     });
  
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener estadísticas', detalle: error.message });
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al obtener estadísticas', ...(detalle && { detalle }) });
   }
 });
- 
+
 // ── GET /api/alertas/:id ──────────────────────────────────────────────────────
-// Devuelve una alerta por su ID de MongoDB
+// REQUIERE AUTENTICACION. Devuelve una alerta por su ID de MongoDB
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   if (!esIdValido(req.params.id)) {
     return res.status(400).json({ error: 'ID no válido' });
   }
@@ -111,15 +135,18 @@ router.get('/:id', async (req, res) => {
     res.json(alerta);
  
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener la alerta', detalle: error.message });
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al obtener la alerta', ...(detalle && { detalle }) });
   }
 });
  
 // ── POST /api/alertas ─────────────────────────────────────────────────────────
-// Crea una nueva alerta
+// REQUIERE AUTENTICACION. Crea una nueva alerta
 // Body JSON con los campos del esquema (timestamp es opcional, default = ahora)
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/', requireAuth, [
+router.post('/', authenticateToken, [
   body('tipo').isIn([
     'Acceso no autorizado',
     'Fuerza bruta',
@@ -167,7 +194,10 @@ router.post('/', requireAuth, [
       const errores = Object.values(error.errors).map(e => e.message);
       return res.status(400).json({ error: 'Datos no válidos', detalle: errores });
     }
-    res.status(500).json({ error: 'Error al crear la alerta', detalle: error.message });
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al crear la alerta', ...(detalle && { detalle }) });
   }
 });
  
@@ -175,7 +205,7 @@ router.post('/', requireAuth, [
 // Actualiza solo el estado de una alerta
 // Body: { "estado": "Resuelta" }
 // ─────────────────────────────────────────────────────────────────────────────
-router.patch('/:id/estado', requireAuth, [
+router.patch('/:id/estado', authenticateToken, [
   body('estado').isIn(['Nueva', 'En revisión', 'Resuelta', 'Falso positivo']).withMessage('Estado no válido'),
 ], async (req, res) => {
   if (!esIdValido(req.params.id)) {
@@ -210,7 +240,10 @@ router.patch('/:id/estado', requireAuth, [
       const errores = Object.values(error.errors).map(e => e.message);
       return res.status(400).json({ error: 'Estado no válido', detalle: errores });
     }
-    res.status(500).json({ error: 'Error al actualizar el estado', detalle: error.message });
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al actualizar el estado', ...(detalle && { detalle }) });
   }
 });
  
@@ -218,7 +251,7 @@ router.patch('/:id/estado', requireAuth, [
 // Asigna un operador a la alerta
 // Body: { "operador": "diego" }
 // ─────────────────────────────────────────────────────────────────────────────
-router.patch('/:id/operador', requireAuth, [
+router.patch('/:id/operador', authenticateToken, [
   body('operador').isLength({ min: 1, max: 50 }).trim().escape().withMessage('Operador requerido y debe ser menor a 50 caracteres'),
 ], async (req, res) => {
   if (!esIdValido(req.params.id)) {
@@ -246,7 +279,10 @@ router.patch('/:id/operador', requireAuth, [
     res.json(actualizada);
  
   } catch (error) {
-    res.status(500).json({ error: 'Error al asignar operador', detalle: error.message });
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al asignar operador', ...(detalle && { detalle }) });
   }
 });
  
@@ -273,10 +309,10 @@ router.delete('/:id', requireAuth, async (req, res) => {
 });
 
 // ── GET /api/alertas/charts/timeline ──────────────────────────────────────────
-// Datos para gráfica de evolución temporal (últimos 7 días)
+// REQUIERE AUTENTICACION. Datos para gráfica de evolución temporal (últimos 7 días)
 // Devuelve: { fecha, total, porSeveridad: { Crítica, Alta, Media, Baja } }
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/charts/timeline', async (req, res) => {
+router.get('/charts/timeline', authenticateToken, async (req, res) => {
   try {
     const hace7dias = new Date();
     hace7dias.setDate(hace7dias.getDate() - 7);
@@ -316,14 +352,17 @@ router.get('/charts/timeline', async (req, res) => {
       periodo: '7 días',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener datos de gráficas', detalle: error.message });
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al obtener datos de gráficas', ...(detalle && { detalle }) });
   }
 });
 
 // ── GET /api/alertas/charts/severity ──────────────────────────────────────────
-// Distribuación de alertas por severidad (Pie/Doughnut chart)
+// REQUIERE AUTENTICACION. Distribución de alertas por severidad (Pie/Doughnut chart)
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/charts/severity', async (req, res) => {
+router.get('/charts/severity', authenticateToken, async (req, res) => {
   try {
     const data = await Alerta.aggregate([
       {
@@ -342,14 +381,17 @@ router.get('/charts/severity', async (req, res) => {
       datos: data.map(d => d.cantidad),
     });
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener distribución de severidad', detalle: error.message });
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al obtener distribución de severidad', ...(detalle && { detalle }) });
   }
 });
 
 // ── GET /api/alertas/charts/types ────────────────────────────────────────────
-// Top 10 tipos de alerta (Bar chart)
+// REQUIERE AUTENTICACION. Top 10 tipos de alerta (Bar chart)
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/charts/types', async (req, res) => {
+router.get('/charts/types', authenticateToken, async (req, res) => {
   try {
     const data = await Alerta.aggregate([
       {
@@ -371,7 +413,35 @@ router.get('/charts/types', async (req, res) => {
       datos: data.map(d => d.cantidad),
     });
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener tipos de alerta', detalle: error.message });
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al obtener tipos de alerta', ...(detalle && { detalle }) });
+  }
+});
+
+// ── DELETE /api/alertas/:id ───────────────────────────────────────────────────
+// REQUIERE AUTENTICACION. Elimina una alerta por su ID (auditoría: soft delete recomendado)
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/:id', authenticateToken, async (req, res) => {
+  if (!esIdValido(req.params.id)) {
+    return res.status(400).json({ error: 'ID no válido' });
+  }
+
+  try {
+    const eliminada = await Alerta.findByIdAndDelete(req.params.id);
+
+    if (!eliminada) {
+      return res.status(404).json({ error: 'Alerta no encontrada' });
+    }
+
+    res.json({ mensaje: 'Alerta eliminada correctamente', id: req.params.id });
+
+  } catch (error) {
+    const detalle = process.env.NODE_ENV === 'production' 
+      ? undefined 
+      : error.message;
+    res.status(500).json({ error: 'Error al eliminar la alerta', ...(detalle && { detalle }) });
   }
 });
 

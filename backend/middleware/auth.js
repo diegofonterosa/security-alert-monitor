@@ -1,7 +1,19 @@
 const jwt = require('jsonwebtoken');
 const Usuario = require('../models/Usuario');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-jwt-super-seguro';
+// Validar que JWT_SECRET esté definido
+if (!process.env.JWT_SECRET) {
+  console.error('ERROR CRÍTICO: JWT_SECRET no está definido en .env');
+  process.exit(1);
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
+
+// Generar token JWT
+const generarToken = (payload) => {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+};
 
 // Middleware para verificar token JWT
 const authenticateToken = async (req, res, next) => {
@@ -46,5 +58,7 @@ module.exports = {
   authenticateToken,
   requireAdmin,
   requireRole,
+  generarToken,
   JWT_SECRET,
+  JWT_EXPIRES_IN,
 };

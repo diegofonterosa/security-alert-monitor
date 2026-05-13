@@ -11,8 +11,14 @@ const { generarToken } = require('../middleware/auth');
 // Las credenciales viven en .env (no en base de datos)
 // Para generar el hash de tu password:
 //   node -e "require('bcryptjs').hash('TU_PASSWORD',10).then(console.log)"
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_HASH = process.env.ADMIN_HASH || '';
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_HASH = process.env.ADMIN_HASH;
+
+// Validar que las credenciales estén configuradas
+if (!ADMIN_USER || !ADMIN_HASH) {
+  console.error('ERROR CRÍTICO: ADMIN_USER y/o ADMIN_HASH no definidos en .env');
+  process.exit(1);
+}
 
 // POST /api/auth/login
 // Body: { "usuario": "admin", "password": "..." }
