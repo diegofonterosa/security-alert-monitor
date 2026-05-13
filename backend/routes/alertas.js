@@ -316,7 +316,7 @@ router.patch('/:id/operador', authenticateToken, [
 // ── DELETE /api/alertas/:id ───────────────────────────────────────────────────
 // Elimina una alerta por ID
 // ─────────────────────────────────────────────────────────────────────────────
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   if (!esIdValido(req.params.id)) {
     return res.status(400).json({ error: 'ID no válido' });
   }

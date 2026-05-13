@@ -26,10 +26,18 @@ const authenticateToken = async (req, res, next) => {
 
     try {
           const decoded = jwt.verify(token, JWT_SECRET);
-          req.user = await Usuario.findById(decoded.id).select('-password');
-          if (!req.user) {
-                  return res.status(401).json({ error: 'Token inválido. Usuario no encontrado.' });
+
+          // Si el token tiene id, buscar en BD (usuarios de base de datos)
+          if (decoded.id) {
+                  req.user = await Usuario.findById(decoded.id).select('-password');
+                  if (!req.user) {
+                          return res.status(401).json({ error: 'Token inválido. Usuario no encontrado.' });
+                  }
+          } else {
+                  // Admin autenticado via .env (token con usuario/rol, sin id)
+                  req.user = { usuario: decoded.usuario, role: decoded.rol };
           }
+
           next();
     } catch (error) {
           console.error('[AUTH] Token verification failed:', error.message);

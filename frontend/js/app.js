@@ -59,7 +59,7 @@ setInterval(comprobarEstado, 30_000);
 // ── Cargar estadísticas (cards superiores) ────────────────────────────────────
 async function cargarStats() {
   try {
-    const res = await fetch(`${API}/stats`);
+    const res = await fetchAuth(`${API}/stats`);
     const data = await res.json();
 
     document.getElementById('statTotal').textContent = data.total ?? '—';
@@ -152,7 +152,7 @@ async function cargarAlertas() {
   if (state.filtros.tipo) params.set('tipo', state.filtros.tipo);
 
   try {
-    const res = await fetch(`${API}?${params}`);
+    const res = await fetchAuth(`${API}?${params}`);
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -236,6 +236,7 @@ function renderizarPaginacion({ pagina, paginas }) {
   const paginTpl = document.createElement('template');
     paginTpl.innerHTML = html;
     paginacion.replaceChildren(...paginTpl.content.childNodes);
+}
 
 function irPagina(n) {
   state.pagina = n;
@@ -250,7 +251,7 @@ async function abrirModal(id) {
   modalOverlay.classList.add('open');
 
   try {
-    const res = await fetch(`${API}/${id}`);
+    const res = await fetchAuth(`${API}/${id}`);
     const a = await res.json();
 
     modalBody.innerHTML = `
@@ -308,7 +309,7 @@ btnGuardarEstado.addEventListener('click', async () => {
   btnGuardarEstado.disabled = true;
 
   try {
-    const res = await fetchAuth(`${API}/${state.alertaActiva}/estado`, {
+    const res = await fetchAuthAuth(`${API}/${state.alertaActiva}/estado`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ estado: modalEstado.value }),
@@ -383,15 +384,15 @@ let chartsInstances = {
 async function cargarGraficas() {
   try {
     // Gráfica de evolución temporal
-    const timelineData = await fetch(`${API}/charts/timeline`).then(r => r.json());
+    const timelineData = await fetchAuth(`${API}/charts/timeline`).then(r => r.json());
     renderTimelineChart(timelineData.datos);
 
     // Gráfica de distribución por severidad
-    const severityData = await fetch(`${API}/charts/severity`).then(r => r.json());
+    const severityData = await fetchAuth(`${API}/charts/severity`).then(r => r.json());
     renderSeverityChart(severityData);
 
     // Gráfica de top tipos
-    const typesData = await fetch(`${API}/charts/types`).then(r => r.json());
+    const typesData = await fetchAuth(`${API}/charts/types`).then(r => r.json());
     renderTypesChart(typesData);
   } catch (err) {
     console.error('Error al cargar gráficas:', err);
@@ -528,9 +529,17 @@ function renderTypesChart(data) {
 }
 
 // ── ARRANQUE ──────────────────────────────────────────────────────────────────
-cargarStats();
-cargarAlertas();
-cargarGraficas();
+// Solo cargar datos si ya hay sesión activa
+if (sessionStorage.getItem('siem_token')) {
+  comprobarEstado();
+  cargarStats();
+  cargarAlertas();
+  cargarGraficas();
+}
 
-// Refrescar gráficas cada 5 minutos
-setInterval(cargarGraficas, 5 * 60 * 1000);
+// Refrescar gráficas cada 5 minutos (solo si hay sesión)
+setInterval(() => {
+  if (sessionStorage.getItem('siem_token')) {
+    cargarGraficas();
+  }
+}, 5 * 60 * 1000);

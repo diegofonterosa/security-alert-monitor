@@ -61,6 +61,12 @@ loginForm.addEventListener('submit', async (e) => {
                                    loginPass.value = '';
                                    actualizarUI();
 
+                                   // Recargar dashboard tras login exitoso
+                                    cargarStats();
+                                    cargarAlertas();
+                                    cargarGraficas();
+                                    comprobarEstado();
+
                              } catch (err) {
                                    loginError.textContent   = err.message;
                                    loginError.style.display = 'block';
