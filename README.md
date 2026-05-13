@@ -88,31 +88,19 @@ security-alert-monitor/
 
 ---
 
-## � Modelo de Usuario — Colección `usuarios`
+## 👤 Autenticación
 
-```json
-{
-  "_id": "ObjectId",
-  "username": "admin",
-  "email": "admin@security.local",
-  "password": "hashed_password",
-  "role": "user | admin",
-  "createdAt": "2026-03-11T14:32:00Z",
-  "updatedAt": "2026-03-11T14:32:00Z"
-}
-```
+El proyecto utiliza credenciales de administrador configuradas en variables de entorno (`ADMIN_USER` y `ADMIN_HASH`) y no mantiene una colección de usuarios en la base de datos.
 
 ---
 
-## �🚀 Endpoints API REST
+## 🚀 Endpoints API REST
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `GET` | `/api/health` | Estado de salud del servicio |
-| `POST` | `/api/auth/register` | Registrar nuevo usuario (solo admin) |
 | `POST` | `/api/auth/login` | Iniciar sesión y obtener token JWT |
-| `GET` | `/api/auth/me` | Obtener información del usuario actual |
-| `GET` | `/api/auth/users` | Listar usuarios (solo admin) |
+| `POST` | `/api/auth/logout` | Cerrar sesión (el cliente elimina el token) |
 | `GET` | `/api/alertas` | Listar todas las alertas (con filtros y paginación) |
 | `GET` | `/api/alertas/stats` | Estadísticas agregadas por severidad y estado |
 | `GET` | `/api/alertas/charts/timeline` | Evolución temporal (últimos 7 días) |
