@@ -208,34 +208,43 @@ function renderizarTabla(alertas) {
 // ── Renderizar paginación ─────────────────────────────────────────────────────
 function renderizarPaginacion({ pagina, paginas }) {
   if (!paginas || paginas <= 1) {
-        paginacion.replaceChildren();
+    paginacion.replaceChildren();
     return;
   }
-  
-  // Mostrar controles de paginación solo si hay más de una página
 
-  let html = `
-    <button class="page-btn" onclick="irPagina(${pagina - 1})" ${pagina <= 1 ? 'disabled' : ''}>‹ Ant</button>
-  `;
+  paginacion.innerHTML = '';
 
+  // Boton Anterior
+  const btnAnt = document.createElement('button');
+  btnAnt.className = 'page-btn';
+  btnAnt.textContent = '‹ Ant';
+  btnAnt.disabled = pagina <= 1;
+  btnAnt.addEventListener('click', () => irPagina(pagina - 1));
+  paginacion.appendChild(btnAnt);
+
+  // Botones de pagina
   for (let i = 1; i <= paginas; i++) {
-    if (
-      i === 1 || i === paginas ||
-      (i >= pagina - 2 && i <= pagina + 2)
-    ) {
-      html += `<button class="page-btn ${i === pagina ? 'active' : ''}" onclick="irPagina(${i})">${i}</button>`;
+    if (i === 1 || i === paginas || (i >= pagina - 2 && i <= pagina + 2)) {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (i === pagina ? ' active' : '');
+      btn.textContent = i;
+      btn.addEventListener('click', () => irPagina(i));
+      paginacion.appendChild(btn);
     } else if (i === pagina - 3 || i === pagina + 3) {
-      html += `<span style="color:var(--text-muted);padding:0 4px">…</span>`;
+      const span = document.createElement('span');
+      span.style.cssText = 'color:var(--text-muted);padding:0 4px';
+      span.textContent = '…';
+      paginacion.appendChild(span);
     }
   }
 
-  html += `
-    <button class="page-btn" onclick="irPagina(${pagina + 1})" ${pagina >= paginas ? 'disabled' : ''}>Sig ›</button>
-  `;
-
-  const paginTpl = document.createElement('template');
-    paginTpl.innerHTML = html;
-    paginacion.replaceChildren(...paginTpl.content.childNodes);
+  // Boton Siguiente
+  const btnSig = document.createElement('button');
+  btnSig.className = 'page-btn';
+  btnSig.textContent = 'Sig ›';
+  btnSig.disabled = pagina >= paginas;
+  btnSig.addEventListener('click', () => irPagina(pagina + 1));
+  paginacion.appendChild(btnSig);
 }
 
 function irPagina(n) {
